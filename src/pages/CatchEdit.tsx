@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ChevronDown, ChevronUp, Trash2, X } from 'lucide-react';
 import { db } from '../db';
@@ -24,7 +24,6 @@ export default function CatchEdit() {
   const [showMore, setShowMore] = useState(false);
   const [showConditions, setShowConditions] = useState(false);
   const [showFishImage, setShowFishImage] = useState(false);
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     db.catches.get(id!).then((r) => {
@@ -40,28 +39,21 @@ export default function CatchEdit() {
       } else {
         setRec(null);
       }
+    }).catch((e) => {
+      console.error('[CatchEdit] load error:', e);
+      navigate('/log');
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  // Auto-save: debounced write to db whenever rec changes
+  // Auto-save: write to db immediately on every change (no debounce)
+  // Debouncing + flushing on unmount caused DB locks when navigating away
   useEffect(() => {
     if (!rec) return;
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => {
-      const isComplete = !!(rec.species && rec.weightKg != null);
-      db.catches.put({ ...rec, complete: isComplete });
-      saveTimer.current = null;
-    }, 500);
-    return () => {
-      // On unmount/navigate away: flush pending save immediately instead of cancelling
-      if (saveTimer.current) {
-        clearTimeout(saveTimer.current);
-        saveTimer.current = null;
-        const isComplete = !!(rec.species && rec.weightKg != null);
-        db.catches.put({ ...rec, complete: isComplete });
-      }
-    };
+    const isComplete = !!(rec.species && rec.weightKg != null);
+    db.catches.put({ ...rec, complete: isComplete }).catch((e) => 
+      console.error('[CatchEdit] save error:', e)
+    );
   }, [rec]);
 
   if (!rec) return <div className="p-6 text-sm text-ink-3">Loading…</div>;
