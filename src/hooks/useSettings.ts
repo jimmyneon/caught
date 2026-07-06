@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { pushSettings } from '../lib/sync';
 
 const KEY = 'caught-settings';
+const TS_KEY = 'caught-settings-updated-at';
 const EVENT = 'caught-settings-changed';
 
 const DEFAULTS: Settings = {
@@ -24,6 +25,14 @@ export function loadSettings(): Settings {
   }
 }
 
+export function getSettingsUpdatedAt(): number {
+  return parseInt(localStorage.getItem(TS_KEY) ?? '0', 10);
+}
+
+export function setSettingsUpdatedAt(ts: number): void {
+  localStorage.setItem(TS_KEY, String(ts));
+}
+
 export function useSettings(): [Settings, (patch: Partial<Settings>) => void] {
   const [settings, setSettings] = useState<Settings>(loadSettings);
 
@@ -35,13 +44,15 @@ export function useSettings(): [Settings, (patch: Partial<Settings>) => void] {
 
   const update = useCallback((patch: Partial<Settings>) => {
     const next = { ...loadSettings(), ...patch };
+    const now = Date.now();
     localStorage.setItem(KEY, JSON.stringify(next));
+    setSettingsUpdatedAt(now);
     window.dispatchEvent(new Event(EVENT));
     // Push to Supabase if logged in
     if (supabase) {
       supabase.auth.getSession().then(({ data }) => {
         if (data.session?.user) {
-          pushSettings(data.session.user.id, next).catch(console.error);
+          pushSettings(data.session.user.id, next, now).catch(console.error);
         }
       });
     }

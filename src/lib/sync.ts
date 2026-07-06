@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 import { db } from '../db';
-import { loadSettings } from '../hooks/useSettings';
+import { loadSettings, getSettingsUpdatedAt, setSettingsUpdatedAt } from '../hooks/useSettings';
 import type { CatchRecord, Settings } from '../types';
 
 function toRow(c: CatchRecord, userId: string) {
@@ -124,7 +124,7 @@ export async function pullRemoteCatches(userId: string): Promise<void> {
 // SETTINGS SYNC
 // ============================================================
 
-export async function pushSettings(userId: string, settings: Settings): Promise<void> {
+export async function pushSettings(userId: string, settings: Settings, updatedAt?: number): Promise<void> {
   if (!supabase) return;
   try {
     await supabase.from('settings').upsert({
@@ -136,13 +136,14 @@ export async function pushSettings(userId: string, settings: Settings): Promise<
       favourite_baits: settings.favouriteBaits ?? [],
       default_water_type: settings.defaultWaterType ?? null,
       theme: settings.theme,
+      updated_at: updatedAt ?? Date.now(),
     });
   } catch (e) {
     console.error('[sync] Push settings error:', e);
   }
 }
 
-export async function pullSettings(userId: string): Promise<Partial<Settings> | null> {
+export async function pullSettings(userId: string): Promise<{ settings: Partial<Settings>; updatedAt: number } | null> {
   if (!supabase) return null;
   const { data, error } = await supabase
     .from('settings')
@@ -153,13 +154,16 @@ export async function pullSettings(userId: string): Promise<Partial<Settings> | 
   if (error || !data) return null;
 
   return {
-    units: data.units,
-    tempUnit: data.temp_unit,
-    saveLocation: data.save_location,
-    favouriteSpecies: data.favourite_species ?? [],
-    favouriteBaits: data.favourite_baits ?? [],
-    defaultWaterType: data.default_water_type ?? undefined,
-    theme: data.theme,
+    settings: {
+      units: data.units,
+      tempUnit: data.temp_unit,
+      saveLocation: data.save_location,
+      favouriteSpecies: data.favourite_species ?? [],
+      favouriteBaits: data.favourite_baits ?? [],
+      defaultWaterType: data.default_water_type ?? undefined,
+      theme: data.theme,
+    },
+    updatedAt: data.updated_at ?? 0,
   };
 }
 
@@ -216,14 +220,30 @@ export async function initialSync(userId: string): Promise<void> {
     await pullRemoteCatches(userId);
     // 2. Push any unsynced local catches to remote
     await syncPushQueue(userId);
-    // 3. Sync settings
-    const remoteSettings = await pullSettings(userId);
-    if (remoteSettings) {
+    // 3. Sync settings — most recent wins (compare timestamps)
+    const remote = await pullSettings(userId);
+    if (remote) {
       const local = loadSettings();
-      const merged = { ...local, ...remoteSettings };
-      localStorage.setItem('caught-settings', JSON.stringify(merged));
-      window.dispatchEvent(new Event('caught-settings-changed'));
+      const localTs = getSettingsUpdatedAt();
+      const remoteTs = remote.updatedAt;
+
+      if (localTs > remoteTs) {
+        // Local is newer — push local to cloud
+        console.log('[sync] Settings: local is newer, pushing to cloud');
+        await pushSettings(userId, local, localTs);
+      } else if (remoteTs > localTs) {
+        // Remote is newer — pull remote to local
+        console.log('[sync] Settings: remote is newer, pulling from cloud');
+        const merged = { ...local, ...remote.settings };
+        localStorage.setItem('caught-settings', JSON.stringify(merged));
+        setSettingsUpdatedAt(remoteTs);
+        window.dispatchEvent(new Event('caught-settings-changed'));
+      } else {
+        // Same timestamp or both 0 — no action needed
+        console.log('[sync] Settings: in sync');
+      }
     } else {
+      // No remote settings — push local to cloud
       await pushSettings(userId, loadSettings());
     }
     // 4. Sync calendar plans
@@ -243,6 +263,12 @@ export async function initialSync(userId: string): Promise<void> {
 export async function quickSync(userId: string): Promise<void> {
   try {
     await syncPushQueue(userId);
+    // Retry settings push — ensures offline changes eventually reach cloud
+    const local = loadSettings();
+    const localTs = getSettingsUpdatedAt();
+    if (localTs > 0) {
+      await pushSettings(userId, local, localTs);
+    }
   } catch (e) {
     console.error('[sync] Quick sync error:', e);
   }
