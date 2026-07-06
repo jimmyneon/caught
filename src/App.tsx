@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import { Download, X } from 'lucide-react';
 import Home from './pages/Home';
 import LogPage from './pages/LogPage';
@@ -24,6 +24,7 @@ interface BeforeInstallPromptEvent extends Event {
 export default function App() {
   const [settings] = useSettings();
   const { user } = useAuth();
+  const location = useLocation();
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const syncedUserId = useRef<string | null>(null);
 
@@ -34,11 +35,34 @@ export default function App() {
     }
   }, [user]);
 
+  // Set theme-color based on route + theme
+  // Home page has a dark background image, so always use dark color there
+  // Other pages use the surface color matching the theme
   useEffect(() => {
+    const isHome = location.pathname === '/';
+    const color = isHome
+      ? '#1a1a1a'
+      : settings.theme === 'dusk'
+        ? '#0f0f0f'
+        : '#f5f4f2';
     document.documentElement.setAttribute('data-theme', settings.theme);
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', settings.theme === 'dusk' ? '#0f0f0f' : '#f5f4f2');
-  }, [settings.theme]);
+    if (meta) meta.setAttribute('content', color);
+  }, [settings.theme, location.pathname]);
+
+  // Fix viewport height for PWA — 100dvh can be unreliable on refresh
+  useEffect(() => {
+    const setHeight = () => {
+      document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);
+    };
+    setHeight();
+    window.addEventListener('resize', setHeight);
+    window.addEventListener('orientationchange', setHeight);
+    return () => {
+      window.removeEventListener('resize', setHeight);
+      window.removeEventListener('orientationchange', setHeight);
+    };
+  }, []);
 
   useEffect(() => {
     retryPendingEnrichment(settings.saveLocation);
@@ -98,10 +122,8 @@ export default function App() {
           </button>
         </div>
       )}
-      <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-[1000]">
-        <div className="pointer-events-auto">
-          <NavBar />
-        </div>
+      <div className="relative z-50 shrink-0">
+        <NavBar />
       </div>
     </div>
   );

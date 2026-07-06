@@ -84,10 +84,13 @@ html,
 body {
   height: 100%;
   margin: 0;
+  overflow: hidden;
 }
 
 #root {
+  height: 100vh;
   height: 100dvh;
+  height: var(--app-height, 100dvh);
   margin: 0;
   overflow: hidden;
 }

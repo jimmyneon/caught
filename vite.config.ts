@@ -14,7 +14,7 @@ export default defineConfig({
         short_name: 'Caught',
         description: 'One-tap fishing catch log with weather & tide forecasts',
         theme_color: '#0891b2',
-        background_color: '#fafaf9',
+        background_color: '#1a1a1a',
         display: 'standalone',
         start_url: '/',
         icons: [

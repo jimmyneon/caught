@@ -227,7 +227,7 @@ export default function Home() {
               const first = incompleteCatches[0];
               if (first) navigate(`/catch/${first.id}`);
             }}
-            className="mb-28 flex w-full items-center gap-3 rounded-2xl bg-white/8 p-3.5 backdrop-blur-md transition-transform active:scale-[0.98]"
+            className="mb-4 flex w-full items-center gap-3 rounded-2xl bg-white/8 p-3.5 backdrop-blur-md transition-transform active:scale-[0.98]"
           >
             <span className="flex-1 text-left text-sm font-semibold text-white">
               {incomplete} incomplete catch{incomplete > 1 ? 'es' : ''} to finish
