@@ -34,7 +34,7 @@ export default function CatchEdit() {
           r = { ...r, waterType: settings.defaultWaterType };
         }
         setRec(r);
-        if (r.method || r.waterType || r.kept != null || r.notes) {
+        if (r.notes) {
           setShowMore(true);
         }
       } else {
@@ -104,6 +104,26 @@ export default function CatchEdit() {
 
         <SpeciesInput value={rec.species ?? ''} onChange={(species) => patch({ species })} waterType={rec.waterType} />
 
+        {/* Water type — right after species for intelligent suggestions */}
+        <SelectDropdown
+          label="Water type"
+          placeholder="Select water type"
+          options={WATER_TYPES.map((w) => ({ value: w, label: w, image: getWaterImage(w) ?? undefined }))}
+          value={rec.waterType}
+          onChange={(w) => patch({ waterType: w as WaterType | undefined })}
+          capitalize
+        />
+
+        {/* Method / bait — right after water type for dynamic filtering */}
+        <MethodSelect
+          value={rec.method}
+          subType={rec.baitSubType}
+          species={rec.species}
+          waterType={rec.waterType}
+          onChange={(method) => patch({ method })}
+          onSubTypeChange={(baitSubType) => patch({ baitSubType })}
+        />
+
         <WeightInput
           valueKg={rec.weightKg}
           units={settings.units}
@@ -157,25 +177,6 @@ export default function CatchEdit() {
 
         {showMore && (
           <div className="flex animate-fade-in flex-col gap-4">
-            {/* Method dropdown */}
-            <MethodSelect
-              value={rec.method}
-              subType={rec.baitSubType}
-              species={rec.species}
-              onChange={(method) => patch({ method })}
-              onSubTypeChange={(baitSubType) => patch({ baitSubType })}
-            />
-
-            {/* Water type dropdown */}
-            <SelectDropdown
-              label="Water type"
-              placeholder="Select water type"
-              options={WATER_TYPES.map((w) => ({ value: w, label: w, image: getWaterImage(w) ?? undefined }))}
-              value={rec.waterType}
-              onChange={(w) => patch({ waterType: w as WaterType | undefined })}
-              capitalize
-            />
-
             {/* Notes */}
             <div>
               <label className="label">Notes</label>
@@ -217,7 +218,7 @@ export default function CatchEdit() {
         const img = getSpeciesImage(rec.species ?? '');
         return img ? (
           <div
-            className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/90 animate-fade-in"
+            className="fixed inset-0 z-2000 flex items-center justify-center bg-black/90 animate-fade-in"
             onClick={() => setShowFishImage(false)}
           >
             <button

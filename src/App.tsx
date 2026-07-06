@@ -109,7 +109,7 @@ export default function App() {
   };
 
   return (
-    <div className="relative mx-auto flex h-full w-full max-w-md flex-col overflow-hidden bg-surface-2">
+    <div className="relative mx-auto flex h-full w-full max-w-md flex-col overflow-hidden">
       <main ref={mainRef} className="relative flex-1 overflow-y-auto overflow-x-hidden">
         <Routes>
           <Route path="/auth" element={<AuthPage />} />

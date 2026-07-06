@@ -148,7 +148,7 @@ function CatchGridCard({ record, settings }: { record: CatchRecord; settings: Se
           );
         })()}
         <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.6) 100%)' }} />
-        <div className="relative flex h-full min-h-[8rem] flex-col justify-end p-3">
+        <div className="relative flex h-full min-h-32 flex-col justify-end p-3">
           <div className="truncate text-sm font-bold text-white drop-shadow-md">
             {record.species || 'Unknown fish'}
           </div>

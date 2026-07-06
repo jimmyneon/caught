@@ -8,12 +8,13 @@ interface Props {
   value: string | undefined;
   subType?: string;
   species?: string;
+  waterType?: string;
   onChange: (v: string | undefined) => void;
   onSubTypeChange?: (v: string | undefined) => void;
   allowCustom?: boolean;
 }
 
-export default function MethodSelect({ value, subType, species, onChange, onSubTypeChange, allowCustom = true }: Props) {
+export default function MethodSelect({ value, subType, species, waterType, onChange, onSubTypeChange, allowCustom = true }: Props) {
   const [settings] = useSettings();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -22,7 +23,7 @@ export default function MethodSelect({ value, subType, species, onChange, onSubT
   const favouriteBaits = settings.favouriteBaits ?? [];
 
   const grouped = useMemo(() => {
-    const methods = getFilteredMethods(species);
+    const methods = getFilteredMethods(species, waterType);
     const q = query.trim().toLowerCase();
     const filtered = q
       ? methods.filter((m) =>
@@ -48,7 +49,7 @@ export default function MethodSelect({ value, subType, species, onChange, onSubT
     return METHOD_CATEGORIES
       .filter((c) => map.has(c.key))
       .map((c) => ({ ...c, items: map.get(c.key)! }));
-  }, [species, query, favouriteBaits]);
+  }, [species, waterType, query, favouriteBaits]);
 
   const [showSubTypes, setShowSubTypes] = useState(false);
 

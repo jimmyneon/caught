@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface Props {
   values: number[];
@@ -13,10 +13,14 @@ const VISIBLE = 5;
 export default function SpinWheel({ values, value, onChange, unit }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const scrollTimer = useRef<number | null>(null);
+  const externalScrollTimer = useRef<number | null>(null);
   const isExternalScroll = useRef(false);
 
   const selectedIndex = values.indexOf(value);
   const targetIndex = selectedIndex >= 0 ? selectedIndex : 0;
+
+  // Track which value is visually centered for styling
+  const [centeredIdx, setCenteredIdx] = useState(targetIndex);
 
   // Scroll to the selected value on mount AND when value changes externally
   useEffect(() => {
@@ -25,11 +29,33 @@ export default function SpinWheel({ values, value, onChange, unit }: Props) {
     if (currentScroll !== targetIndex) {
       isExternalScroll.current = true;
       ref.current.scrollTo({ top: targetIndex * ITEM_HEIGHT, behavior: 'smooth' });
+      // Reset flag after scroll animation completes (onScrollEnd is unreliable)
+      if (externalScrollTimer.current) clearTimeout(externalScrollTimer.current);
+      externalScrollTimer.current = window.setTimeout(() => {
+        isExternalScroll.current = false;
+      }, 400);
     }
+    setCenteredIdx(targetIndex);
   }, [value]);
 
+  // Initialize scroll position on mount
+  useEffect(() => {
+    if (ref.current) {
+      ref.current.scrollTop = targetIndex * ITEM_HEIGHT;
+      setCenteredIdx(targetIndex);
+    }
+  }, []);
+
   const handleScroll = () => {
+    // Update centered index for styling during scroll
+    if (ref.current) {
+      const idx = Math.round(ref.current.scrollTop / ITEM_HEIGHT);
+      const clamped = Math.max(0, Math.min(values.length - 1, idx));
+      setCenteredIdx(clamped);
+    }
+
     if (isExternalScroll.current) return;
+
     if (scrollTimer.current) clearTimeout(scrollTimer.current);
     scrollTimer.current = window.setTimeout(() => {
       if (!ref.current) return;
@@ -42,11 +68,7 @@ export default function SpinWheel({ values, value, onChange, unit }: Props) {
       if (values[clamped] !== value) {
         onChange(values[clamped]);
       }
-    }, 100);
-  };
-
-  const handleScrollEnd = () => {
-    isExternalScroll.current = false;
+    }, 80);
   };
 
   const padding = (VISIBLE - 1) / 2;
@@ -55,7 +77,7 @@ export default function SpinWheel({ values, value, onChange, unit }: Props) {
     <div className="flex flex-1 flex-col items-center">
       <div className="mb-2 text-xs font-bold text-ink-3">{unit}</div>
       <div className="relative w-full" style={{ height: VISIBLE * ITEM_HEIGHT }}>
-        {/* Center highlight bar — BEHIND content */}
+        {/* Center highlight bar */}
         <div
           className="pointer-events-none absolute left-1 right-1 rounded-xl"
           style={{
@@ -67,13 +89,12 @@ export default function SpinWheel({ values, value, onChange, unit }: Props) {
             zIndex: 0,
           }}
         />
-        {/* Top/bottom fade — above content for fade effect */}
+        {/* Top/bottom fade */}
         <div className="pointer-events-none absolute inset-x-0 top-0 z-20" style={{ height: padding * ITEM_HEIGHT, background: 'linear-gradient(180deg, var(--c-surface-2) 60%, transparent 100%)' }} />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20" style={{ height: padding * ITEM_HEIGHT, background: 'linear-gradient(0deg, var(--c-surface-2) 60%, transparent 100%)' }} />
         <div
           ref={ref}
           onScroll={handleScroll}
-          onScrollEnd={handleScrollEnd}
           className="relative h-full w-full overflow-y-auto"
           style={{
             scrollSnapType: 'y mandatory',
@@ -84,8 +105,8 @@ export default function SpinWheel({ values, value, onChange, unit }: Props) {
         >
           {/* Top padding */}
           <div style={{ height: padding * ITEM_HEIGHT, scrollSnapAlign: 'none' }} />
-          {values.map((v) => {
-            const isSelected = v === value;
+          {values.map((v, i) => {
+            const isSelected = i === centeredIdx;
             return (
               <div
                 key={v}
@@ -97,7 +118,7 @@ export default function SpinWheel({ values, value, onChange, unit }: Props) {
                   fontWeight: isSelected ? 800 : 600,
                   color: isSelected ? 'var(--c-ink)' : 'var(--c-ink-3)',
                   opacity: isSelected ? 1 : 0.35,
-                  transition: 'font-size 0.15s, font-weight 0.15s, opacity 0.15s',
+                  transition: 'font-size 0.1s, font-weight 0.1s, opacity 0.1s',
                 }}
               >
                 {v}

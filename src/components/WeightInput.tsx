@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, ChevronDown, Check } from 'lucide-react';
 import { kgToLbOz, lbOzToKg, formatWeight } from '../lib/units';
 import BottomSheet from './BottomSheet';
@@ -57,6 +57,16 @@ export default function WeightInput({ valueKg, units, onChange }: Props) {
     setGState(0);
     onChange(undefined);
   };
+
+  // Sync local state when valueKg changes externally (e.g. after clear)
+  useEffect(() => {
+    if (valueKg == null) {
+      setKgState(0);
+      setGState(0);
+      setLb(0);
+      setOz(0);
+    }
+  }, [valueKg]);
 
   const displayValue = hasValue ? formatWeight(valueKg!, units) : 'Not set';
 

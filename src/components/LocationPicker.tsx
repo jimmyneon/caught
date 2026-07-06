@@ -94,9 +94,15 @@ export default function LocationPicker({ lat, lon, onChange }: Props) {
             </div>
           </a>
           <button
-            className="field flex shrink-0 items-center justify-center"
-            style={{ width: '3.25rem', color: 'var(--c-accent)' }}
+            className="flex shrink-0 items-center justify-center rounded-xl border"
+            style={{
+              width: '3.5rem',
+              borderColor: 'var(--c-line)',
+              background: 'var(--c-surface)',
+              color: 'var(--c-accent)',
+            }}
             onClick={openPicker}
+            aria-label="Edit location"
           >
             <MapPin size={20} />
           </button>

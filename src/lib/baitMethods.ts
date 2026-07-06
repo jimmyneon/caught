@@ -210,12 +210,38 @@ export function getRecommendedCategories(species: string): BaitMethod['category'
   return SPECIES_METHOD_MAP[key] ?? null;
 }
 
-export function getFilteredMethods(species: string | undefined): BaitMethod[] {
-  if (!species) return BAIT_METHODS;
-  const cats = getRecommendedCategories(species);
-  if (!cats) return BAIT_METHODS;
-  const filtered = BAIT_METHODS.filter((m) => cats.includes(m.category));
-  return filtered.length > 0 ? filtered : BAIT_METHODS;
+// Water type → recommended method categories
+const WATER_TYPE_METHODS: Record<string, BaitMethod['category'][]> = {
+  'sea': ['bait', 'ledger', 'lure'],
+  'river': ['bait', 'ledger', 'float', 'lure', 'fly'],
+  'lake': ['bait', 'ledger', 'float', 'lure', 'fly'],
+  'canal': ['bait', 'ledger', 'float', 'lure'],
+  'reservoir': ['fly', 'lure', 'bait', 'ledger'],
+  'pond': ['bait', 'float', 'ledger', 'lure'],
+  'stream': ['fly', 'bait', 'float'],
+  'estuary': ['bait', 'ledger', 'lure', 'fly'],
+  'stillwater': ['fly', 'lure', 'bait', 'ledger', 'float'],
+  'loch': ['fly', 'lure', 'bait', 'ledger'],
+};
+
+export function getFilteredMethods(species: string | undefined, waterType?: string): BaitMethod[] {
+  // If we have species, filter by species-specific categories
+  if (species) {
+    const cats = getRecommendedCategories(species);
+    if (cats) {
+      const filtered = BAIT_METHODS.filter((m) => cats.includes(m.category));
+      if (filtered.length > 0) return filtered;
+    }
+  }
+  // If we have water type, filter by water type categories
+  if (waterType) {
+    const cats = WATER_TYPE_METHODS[waterType.toLowerCase()];
+    if (cats) {
+      const filtered = BAIT_METHODS.filter((m) => cats.includes(m.category));
+      if (filtered.length > 0) return filtered;
+    }
+  }
+  return BAIT_METHODS;
 }
 
 export function getMethodSubTypes(methodName: string): string[] {
