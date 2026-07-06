@@ -16,7 +16,13 @@ export default function CalendarPage() {
   });
   const [selected, setSelected] = useState<string | null>(null);
 
-  const catches = useLiveQuery(() => db.catches.orderBy('createdAt').reverse().toArray(), []) ?? [];
+  const catches = useLiveQuery(
+    async () => {
+      const all = await db.catches.toArray();
+      return all.sort((a, b) => b.createdAt - a.createdAt);
+    },
+    [],
+  ) ?? [];
 
   const byDay = useMemo(() => {
     const map = new Map<string, number>();

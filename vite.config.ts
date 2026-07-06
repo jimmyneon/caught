@@ -8,7 +8,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       manifest: {
         name: 'Caught',
         short_name: 'Caught',
@@ -25,8 +25,6 @@ export default defineConfig({
         ],
       },
       workbox: {
-        skipWaiting: true,
-        clientsClaim: true,
         runtimeCaching: [
           {
             urlPattern: /tile\.openstreetmap\.org/,

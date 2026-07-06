@@ -85,15 +85,21 @@ export default function Home() {
   }, [user, authLoading, isSupabaseConfigured]);
 
   const incompleteCatches = useLiveQuery(
-    () => db.catches.filter((c) => !c.complete).toArray(),
+    async () => {
+      const all = await db.catches.toArray();
+      return all.filter((c) => !c.complete);
+    },
     [],
-  );
+  ) ?? [];
 
-  const incomplete = incompleteCatches?.length ?? 0;
+  const incomplete = incompleteCatches.length;
 
   const todayStart = new Date().setHours(0, 0, 0, 0);
   const todayCount = useLiveQuery(
-    () => db.catches.where('createdAt').above(todayStart).count(),
+    async () => {
+      const all = await db.catches.toArray();
+      return all.filter((c) => c.createdAt >= todayStart).length;
+    },
     [todayStart],
   ) ?? 0;
 
@@ -218,7 +224,7 @@ export default function Home() {
         {incomplete > 0 && (
           <button
             onClick={() => {
-              const first = incompleteCatches?.[0];
+              const first = incompleteCatches[0];
               if (first) navigate(`/catch/${first.id}`);
             }}
             className="mb-28 flex w-full items-center gap-3 rounded-2xl bg-white/8 p-3.5 backdrop-blur-md transition-transform active:scale-[0.98]"
