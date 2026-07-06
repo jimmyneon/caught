@@ -27,6 +27,12 @@ export default function App() {
   const location = useLocation();
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const syncedUserId = useRef<string | null>(null);
+  const mainRef = useRef<HTMLElement>(null);
+
+  // Reset scroll position on route change — prevents LogPage scroll carrying over to Home
+  useEffect(() => {
+    if (mainRef.current) mainRef.current.scrollTop = 0;
+  }, [location.pathname]);
 
   useEffect(() => {
     if (user && syncedUserId.current !== user.id) {
@@ -97,7 +103,7 @@ export default function App() {
 
   return (
     <div className="relative mx-auto flex h-full w-full max-w-md flex-col overflow-hidden bg-surface-2">
-      <main className="relative flex-1 overflow-y-auto overflow-x-hidden">
+      <main ref={mainRef} className="relative flex-1 overflow-y-auto overflow-x-hidden">
         <Routes>
           <Route path="/auth" element={<AuthPage />} />
           <Route path="/" element={<Home />} />

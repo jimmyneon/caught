@@ -97,16 +97,28 @@ export default function PlanPage() {
     }
   }, [forecasts, scores, fishingType, location]);
 
+  const [userCoords, setUserCoords] = useState<{ lat: number; lon: number } | null>(null);
+
+  // Get user's GPS coordinates once for proximity-sorted search
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setUserCoords({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+      () => {},
+      { timeout: 10000, maximumAge: 60000 },
+    );
+  }, []);
+
   useEffect(() => {
     if (searchQuery.trim().length < 2) { setSearchResults([]); return; }
     setSearching(true);
     const timer = setTimeout(async () => {
-      try { setSearchResults(await searchLocations(searchQuery)); }
+      try { setSearchResults(await searchLocations(searchQuery, userCoords?.lat, userCoords?.lon)); }
       catch { setSearchResults([]); }
       finally { setSearching(false); }
     }, 400);
     return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [searchQuery, userCoords]);
 
   const runForecast = async () => {
     setLoading(true);
@@ -239,10 +251,15 @@ export default function PlanPage() {
                   onClick={() => { setLocation(r); setLocationMode('search'); setSearchQuery(''); setSearchResults([]); setShowLocationMenu(false); }}
                 >
                   <MapPin size={16} style={{ color: 'var(--c-ink-3)' }} />
-                  <div className="flex flex-col">
+                  <div className="flex flex-1 flex-col">
                     <span className="font-bold text-ink">{r.name}</span>
                     {r.country && <span className="text-xs text-ink-3">{r.country}</span>}
                   </div>
+                  {r.distance != null && (
+                    <span className="shrink-0 text-xs font-bold" style={{ color: 'var(--c-ink-3)' }}>
+                      {r.distance < 1 ? '<1 km' : `${Math.round(r.distance)} km`}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
