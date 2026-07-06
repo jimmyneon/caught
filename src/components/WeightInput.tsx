@@ -88,26 +88,19 @@ export default function WeightInput({ valueKg, units, onChange }: Props) {
         <ChevronDown size={18} style={{ color: 'var(--c-ink-3)' }} />
       </button>
 
-      <BottomSheet open={open} onClose={() => setOpen(false)} title="Weight">
+      <BottomSheet open={open} onClose={() => setOpen(false)} fullHeight>
         <div className="flex h-full flex-col">
-          {/* Clear — styled as a proper button row */}
-          <div className="flex items-center justify-between pb-3">
-            <span className="text-sm font-bold text-ink-3">
-              {hasValue ? formatWeight(valueKg!, units) : 'No weight set'}
-            </span>
-            <button
-              type="button"
-              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-colors active:opacity-60"
-              style={{ background: 'var(--c-surface-3)', color: 'var(--c-ink-2)' }}
-              onClick={clear}
-            >
-              <X size={14} /> Clear
-            </button>
+          {/* Header with unit label */}
+          <div className="pb-2 text-center">
+            <h2 className="text-xl font-extrabold text-ink">Weight</h2>
+            <p className="mt-0.5 text-xs font-medium text-ink-3">
+              {hasValue ? `Current: ${formatWeight(valueKg!, units)}` : 'Scroll to set weight'}
+            </p>
           </div>
 
-          {/* Spin wheels — take available space */}
-          <div className="flex-1 rounded-2xl p-4" style={{ background: 'var(--c-surface-2)' }}>
-            <div className="flex items-stretch gap-4">
+          {/* Spin wheels — take all available space */}
+          <div className="flex flex-1 items-center rounded-2xl p-4" style={{ background: 'var(--c-surface-2)' }}>
+            <div className="flex items-stretch gap-4 w-full">
               {units === 'metric' ? (
                 <>
                   <SpinWheel
@@ -142,9 +135,20 @@ export default function WeightInput({ valueKg, units, onChange }: Props) {
             </div>
           </div>
 
-          {/* Done — pinned at bottom */}
-          <div className="pt-4 pb-2">
-            <button className="btn-primary flex w-full items-center justify-center gap-2" onClick={() => setOpen(false)}>
+          {/* Bottom buttons — Clear and Done side by side */}
+          <div className="flex gap-3 pt-4 pb-2">
+            <button
+              type="button"
+              className="flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold transition-colors active:opacity-60"
+              style={{ background: 'var(--c-surface-3)', color: 'var(--c-ink-2)' }}
+              onClick={clear}
+            >
+              <X size={18} /> Clear
+            </button>
+            <button
+              className="btn-primary flex flex-1 items-center justify-center gap-2"
+              onClick={() => setOpen(false)}
+            >
               <Check size={18} /> Done
             </button>
           </div>

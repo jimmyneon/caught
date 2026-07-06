@@ -7,8 +7,8 @@ interface Props {
   unit: string;
 }
 
-const ITEM_HEIGHT = 44;
-const VISIBLE = 5;
+const ITEM_HEIGHT = 48;
+const VISIBLE = 7;
 
 export default function SpinWheel({ values, value, onChange, unit }: Props) {
   const ref = useRef<HTMLDivElement>(null);
@@ -114,10 +114,10 @@ export default function SpinWheel({ values, value, onChange, unit }: Props) {
                 style={{
                   height: ITEM_HEIGHT,
                   scrollSnapAlign: 'center',
-                  fontSize: isSelected ? '1.5rem' : '1.05rem',
+                  fontSize: isSelected ? '1.75rem' : '1.15rem',
                   fontWeight: isSelected ? 800 : 600,
-                  color: isSelected ? 'var(--c-ink)' : 'var(--c-ink-3)',
-                  opacity: isSelected ? 1 : 0.35,
+                  color: isSelected ? 'var(--c-ink)' : 'var(--c-ink-2)',
+                  opacity: isSelected ? 1 : 0.5,
                   transition: 'font-size 0.1s, font-weight 0.1s, opacity 0.1s',
                 }}
               >
