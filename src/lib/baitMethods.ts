@@ -120,3 +120,98 @@ export function searchMethods(query: string): BaitMethod[] {
     return false;
   }).slice(0, 12);
 }
+
+export const METHOD_CATEGORIES: { key: BaitMethod['category']; label: string }[] = [
+  { key: 'lure', label: 'Lures' },
+  { key: 'fly', label: 'Flies' },
+  { key: 'float', label: 'Float' },
+  { key: 'ledger', label: 'Ledger & Feeder' },
+  { key: 'bait', label: 'Baits' },
+  { key: 'other', label: 'Other Methods' },
+];
+
+const SPECIES_METHOD_MAP: Record<string, BaitMethod['category'][]> = {
+  // Game fish — primarily flies
+  'rainbow trout': ['fly', 'bait'],
+  'brown trout': ['fly', 'bait'],
+  'sea trout': ['fly', 'lure', 'bait'],
+  'brook trout': ['fly', 'bait'],
+  'tiger trout': ['fly', 'bait'],
+  'golden trout': ['fly', 'bait'],
+  'salmon': ['fly', 'lure', 'other'],
+  'grayling': ['fly', 'bait'],
+  'char': ['fly', 'bait'],
+  // Coarse fish
+  'carp': ['bait', 'ledger', 'float'],
+  'mirror carp': ['bait', 'ledger', 'float'],
+  'leather carp': ['bait', 'ledger', 'float'],
+  'crucian carp': ['bait', 'ledger', 'float'],
+  'grass carp': ['bait', 'ledger'],
+  'tench': ['bait', 'ledger', 'float'],
+  'bream': ['bait', 'ledger', 'float'],
+  'skimmer bream': ['bait', 'ledger', 'float'],
+  'roach': ['bait', 'float', 'ledger'],
+  'rudd': ['bait', 'float'],
+  'perch': ['bait', 'lure', 'float'],
+  'pike': ['lure', 'bait', 'other'],
+  'zander': ['lure', 'bait'],
+  'chub': ['bait', 'lure', 'float'],
+  'dace': ['bait', 'float', 'fly'],
+  'barbel': ['bait', 'ledger'],
+  'gudgeon': ['bait', 'float'],
+  'minnow': ['bait', 'float'],
+  'wels catfish': ['bait', 'ledger'],
+  'sturgeon': ['bait', 'ledger'],
+  // Sea fish
+  'bass': ['lure', 'bait', 'other'],
+  'cod': ['bait', 'ledger', 'other'],
+  'pollack': ['lure', 'fly', 'other'],
+  'mackerel': ['lure', 'bait', 'other'],
+  'wrasse': ['bait', 'lure'],
+  'ballan wrasse': ['bait', 'lure'],
+  'flounder': ['bait', 'ledger'],
+  'plaice': ['bait', 'ledger'],
+  'dab': ['bait', 'ledger'],
+  'sole': ['bait', 'ledger'],
+  'turbot': ['bait', 'lure'],
+  'brill': ['bait', 'lure'],
+  'ray': ['bait', 'ledger'],
+  'dogfish': ['bait', 'ledger'],
+  'tope': ['bait', 'lure'],
+  'whiting': ['bait', 'ledger'],
+  'haddock': ['bait', 'ledger'],
+  'garfish': ['bait', 'float', 'fly'],
+  'scad': ['lure', 'bait'],
+  'gurnard': ['bait', 'ledger'],
+  'conger eel': ['bait', 'ledger'],
+  'smoothhound': ['bait', 'ledger'],
+  'huss': ['bait', 'ledger'],
+  'black bream': ['bait', 'lure'],
+  'red bream': ['bait', 'lure'],
+  'pouting': ['bait', 'ledger'],
+  'ling': ['bait', 'ledger', 'lure'],
+  'hake': ['bait', 'ledger'],
+  'squid': ['lure', 'bait'],
+  'cuttlefish': ['bait', 'lure'],
+  'mullet': ['bait', 'float', 'fly'],
+  'sand eel': ['lure', 'bait'],
+  // Other
+  'eel': ['bait', 'ledger'],
+  'lamprey': ['bait'],
+  'shad': ['fly', 'lure'],
+  'smelt': ['bait', 'fly'],
+};
+
+export function getRecommendedCategories(species: string): BaitMethod['category'][] | null {
+  if (!species) return null;
+  const key = species.toLowerCase().trim();
+  return SPECIES_METHOD_MAP[key] ?? null;
+}
+
+export function getFilteredMethods(species: string | undefined): BaitMethod[] {
+  if (!species) return BAIT_METHODS;
+  const cats = getRecommendedCategories(species);
+  if (!cats) return BAIT_METHODS;
+  const filtered = BAIT_METHODS.filter((m) => cats.includes(m.category));
+  return filtered.length > 0 ? filtered : BAIT_METHODS;
+}

@@ -113,7 +113,7 @@ export default function Home() {
   const bgUrl = BG_IMAGES[settings.theme] ?? BG_IMAGES.dawn;
 
   return (
-    <div className="relative h-full w-full overflow-hidden bg-black" style={{ position: 'fixed', inset: 0 }}>
+    <div className="relative h-full w-full overflow-hidden bg-black">
       {/* Full-screen background photo with subtle parallax */}
       <img
         ref={bgRef}

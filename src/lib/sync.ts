@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { db } from '../db';
+import { loadSettings } from '../hooks/useSettings';
 import type { CatchRecord, Settings } from '../types';
 
 function toRow(c: CatchRecord, userId: string) {
@@ -137,6 +138,16 @@ export async function fullSync(userId: string) {
   try {
     await pullRemoteCatches(userId);
     await pushLocalCatches(userId);
+    // Sync settings
+    const remoteSettings = await pullSettings(userId);
+    if (remoteSettings) {
+      const local = loadSettings();
+      const merged = { ...local, ...remoteSettings };
+      localStorage.setItem('caught-settings', JSON.stringify(merged));
+      window.dispatchEvent(new Event('caught-settings-changed'));
+    } else {
+      await pushSettings(userId, loadSettings());
+    }
     await pullCalendarPlans(userId);
     await pushCalendarPlans(userId);
   } catch (e) {

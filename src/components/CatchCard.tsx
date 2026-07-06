@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Fish, Pencil, Check, Trash2 } from 'lucide-react';
+import { Fish, Pencil, Check, Trash2, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { CatchRecord, Settings } from '../types';
 import { formatWeight } from '../lib/units';
@@ -7,7 +7,7 @@ import { fmtDate } from '../lib/format';
 import { db } from '../db';
 import BottomSheet from './BottomSheet';
 import ConditionsSummary, { type CondItem } from './ConditionsSummary';
-import { getSpeciesImage, getWaterImage, getMethodImage } from '../lib/images';
+import { getSpeciesImage } from '../lib/images';
 
 export default function CatchCard({ record, settings }: { record: CatchRecord; settings: Settings }) {
   const [showDetail, setShowDetail] = useState(false);
@@ -15,6 +15,7 @@ export default function CatchCard({ record, settings }: { record: CatchRecord; s
   const [speciesDraft, setSpeciesDraft] = useState(record.species ?? '');
   const [expandedCond, setExpandedCond] = useState<CondItem | null>(null);
   const [showQuickMenu, setShowQuickMenu] = useState(false);
+  const [showFishImage, setShowFishImage] = useState(false);
   const speciesRef = useRef<HTMLInputElement>(null);
   const longPressTimer = useRef<number | null>(null);
   const navigate = useNavigate();
@@ -52,10 +53,13 @@ export default function CatchCard({ record, settings }: { record: CatchRecord; s
         onContextMenu={(e) => { e.preventDefault(); setShowQuickMenu(true); }}
       >
         <div
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
+          className="h-12 w-12 shrink-0 overflow-hidden rounded-xl"
           style={{ background: 'var(--c-accent-bg)' }}
         >
-          <Fish size={22} strokeWidth={1.8} style={{ color: 'var(--c-accent)' }} />
+          {(() => {
+            const img = getSpeciesImage(record.species ?? '');
+            return img ? <img src={img} alt={record.species ?? ''} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center"><Fish size={22} strokeWidth={1.8} style={{ color: 'var(--c-accent)' }} /></div>;
+          })()}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-2">
@@ -81,6 +85,26 @@ export default function CatchCard({ record, settings }: { record: CatchRecord; s
 
       <BottomSheet open={showDetail} onClose={() => { setShowDetail(false); setExpandedCond(null); }}>
         <div className="flex flex-col gap-5">
+          {/* Big fish image as header background */}
+          {(() => {
+            const img = getSpeciesImage(record.species ?? '');
+            return img ? (
+              <button
+                className="relative w-full overflow-hidden rounded-2xl active:scale-[0.98] transition-transform"
+                style={{ height: '14rem' }}
+                onClick={() => setShowFishImage(true)}
+              >
+                <img src={img} alt={record.species ?? ''} className="h-full w-full object-cover" />
+                <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.6) 100%)' }} />
+                <div className="absolute bottom-3 left-4 text-xl font-extrabold text-white drop-shadow-md">
+                  {record.species || 'Unknown fish'}
+                </div>
+              </button>
+            ) : (
+              <div className="text-lg font-extrabold text-ink">{record.species || 'Unknown fish'}</div>
+            );
+          })()}
+
           {/* Species — clickable to edit inline */}
           {editingSpecies ? (
             <div className="flex items-center gap-2">
@@ -106,20 +130,14 @@ export default function CatchCard({ record, settings }: { record: CatchRecord; s
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-3">
-              {(() => {
-                const img = getSpeciesImage(record.species ?? '');
-                return img ? (
-                  <img src={img} alt={record.species ?? ''} className="h-14 w-14 shrink-0 rounded-xl object-cover" />
-                ) : null;
-              })()}
+            !getSpeciesImage(record.species ?? '') && (
               <button
                 className="text-left text-lg font-extrabold text-ink"
                 onClick={() => { setSpeciesDraft(record.species ?? ''); setEditingSpecies(true); }}
               >
                 {record.species || 'Unknown fish'}
               </button>
-            </div>
+            )
           )}
 
           {/* Weight + water type */}
@@ -130,25 +148,13 @@ export default function CatchCard({ record, settings }: { record: CatchRecord; s
               </span>
             )}
             {record.waterType && (
-              <span className="flex items-center gap-1.5 capitalize text-ink-3">
-                {(() => {
-                  const img = getWaterImage(record.waterType);
-                  return img ? <img src={img} alt={record.waterType} className="h-5 w-7 rounded object-cover" /> : null;
-                })()}
-                {record.waterType}
-              </span>
+              <span className="capitalize text-ink-3">{record.waterType}</span>
             )}
           </div>
 
           {/* Method */}
           {record.method && (
-            <div className="flex items-center gap-2 text-sm text-ink-2">
-              {(() => {
-                const img = getMethodImage(record.method);
-                return img ? <img src={img} alt={record.method} className="h-6 w-6 rounded object-cover" /> : null;
-              })()}
-              {record.method}
-            </div>
+            <div className="text-sm text-ink-2">{record.method}</div>
           )}
 
           {/* Notes */}
@@ -211,6 +217,25 @@ export default function CatchCard({ record, settings }: { record: CatchRecord; s
           </button>
         </div>
       </BottomSheet>
+
+      {/* Fish image enlarge overlay */}
+      {showFishImage && (() => {
+        const img = getSpeciesImage(record.species ?? '');
+        return img ? (
+          <div
+            className="fixed inset-0 z-2000 flex items-center justify-center bg-black/90 animate-fade-in"
+            onClick={() => setShowFishImage(false)}
+          >
+            <button
+              className="absolute top-4 right-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white"
+              onClick={() => setShowFishImage(false)}
+            >
+              <X size={24} />
+            </button>
+            <img src={img} alt={record.species ?? ''} className="max-h-[85vh] max-w-full rounded-2xl object-contain" />
+          </div>
+        ) : null;
+      })()}
     </>
   );
 }

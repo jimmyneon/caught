@@ -1,18 +1,18 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trash2, X } from 'lucide-react';
 import { db } from '../db';
 import type { CatchRecord, WaterType } from '../types';
 import { useSettings } from '../hooks/useSettings';
 import { fmtDate } from '../lib/format';
 import SpeciesInput from '../components/SpeciesInput';
 import WeightInput from '../components/WeightInput';
+import MethodSelect from '../components/MethodSelect';
 import SelectDropdown from '../components/SelectDropdown';
 import ConditionsGrid from '../components/ConditionsGrid';
 import LocationPicker from '../components/LocationPicker';
 
-import { BAIT_METHODS, getMethodImage } from '../lib/baitMethods';
-import { getWaterImage } from '../lib/images';
+import { getWaterImage, getSpeciesImage } from '../lib/images';
 
 const WATER_TYPES: WaterType[] = ['sea', 'river', 'lake', 'canal', 'reservoir', 'pond', 'stream', 'estuary', 'stillwater', 'loch'];
 
@@ -23,6 +23,7 @@ export default function CatchEdit() {
   const [rec, setRec] = useState<CatchRecord | null>(null);
   const [showMore, setShowMore] = useState(false);
   const [showConditions, setShowConditions] = useState(false);
+  const [showFishImage, setShowFishImage] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -48,7 +49,8 @@ export default function CatchEdit() {
     if (!rec) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      db.catches.put({ ...rec, complete: true });
+      const isComplete = !!(rec.species && rec.weightKg != null);
+      db.catches.put({ ...rec, complete: isComplete });
     }, 500);
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
   }, [rec]);
@@ -79,6 +81,24 @@ export default function CatchEdit() {
       </div>
 
       <div className="flex flex-col gap-4 pb-24">
+        {/* Fish image — clickable to enlarge */}
+        {(() => {
+          const img = getSpeciesImage(rec.species ?? '');
+          return img ? (
+            <button
+              className="relative w-full overflow-hidden rounded-2xl active:scale-[0.98] transition-transform"
+              style={{ height: '12rem' }}
+              onClick={() => setShowFishImage(true)}
+            >
+              <img src={img} alt={rec.species ?? ''} className="h-full w-full object-cover" />
+              <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, transparent 50%, rgba(0,0,0,0.5) 100%)' }} />
+              <div className="absolute bottom-3 left-4 text-lg font-extrabold text-white drop-shadow-md">
+                {rec.species || 'Unknown fish'}
+              </div>
+            </button>
+          ) : null;
+        })()}
+
         <SpeciesInput value={rec.species ?? ''} onChange={(species) => patch({ species })} />
 
         <WeightInput
@@ -135,14 +155,10 @@ export default function CatchEdit() {
         {showMore && (
           <div className="flex animate-fade-in flex-col gap-4">
             {/* Method dropdown */}
-            <SelectDropdown
-              label="Method / bait"
-              placeholder="Select method"
-              options={BAIT_METHODS.map((m) => ({ value: m.name, label: m.name, image: getMethodImage(m.name) ?? undefined }))}
+            <MethodSelect
               value={rec.method}
+              species={rec.species}
               onChange={(method) => patch({ method })}
-              allowCustom
-              customPlaceholder="Type your own method…"
             />
 
             {/* Water type dropdown */}
@@ -190,6 +206,25 @@ export default function CatchEdit() {
           <Trash2 size={16} /> Delete catch
         </button>
       </div>
+
+      {/* Fish image enlarge overlay */}
+      {showFishImage && (() => {
+        const img = getSpeciesImage(rec.species ?? '');
+        return img ? (
+          <div
+            className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/90 animate-fade-in"
+            onClick={() => setShowFishImage(false)}
+          >
+            <button
+              className="absolute top-4 right-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white"
+              onClick={() => setShowFishImage(false)}
+            >
+              <X size={24} />
+            </button>
+            <img src={img} alt={rec.species ?? ''} className="max-h-[85vh] max-w-full rounded-2xl object-contain" />
+          </div>
+        ) : null;
+      })()}
     </div>
   );
 }
