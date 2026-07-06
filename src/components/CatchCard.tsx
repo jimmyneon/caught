@@ -7,7 +7,7 @@ import { fmtDate } from '../lib/format';
 import { db } from '../db';
 import BottomSheet from './BottomSheet';
 import ConditionsSummary, { type CondItem } from './ConditionsSummary';
-import { getSpeciesImage, getWaterImage } from '../lib/images';
+import { getSpeciesImage, getWaterImage, getMethodImage } from '../lib/images';
 
 export default function CatchCard({ record, settings }: { record: CatchRecord; settings: Settings }) {
   const [showDetail, setShowDetail] = useState(false);
@@ -142,7 +142,13 @@ export default function CatchCard({ record, settings }: { record: CatchRecord; s
 
           {/* Method */}
           {record.method && (
-            <div className="text-sm text-ink-2">{record.method}</div>
+            <div className="flex items-center gap-2 text-sm text-ink-2">
+              {(() => {
+                const img = getMethodImage(record.method);
+                return img ? <img src={img} alt={record.method} className="h-6 w-6 rounded object-cover" /> : null;
+              })()}
+              {record.method}
+            </div>
           )}
 
           {/* Notes */}

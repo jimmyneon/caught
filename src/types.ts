@@ -1,4 +1,4 @@
-export type WaterType = 'sea' | 'river' | 'lake' | 'canal' | 'reservoir';
+export type WaterType = 'sea' | 'river' | 'lake' | 'canal' | 'reservoir' | 'pond' | 'stream' | 'estuary' | 'stillwater' | 'loch';
 
 export type PressureTrend = 'rising' | 'falling' | 'steady';
 

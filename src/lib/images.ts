@@ -31,8 +31,16 @@ const waterImageMap: Record<string, string> = {
   lake: '/images/water/lake.jpg',
   canal: '/images/water/canal.jpg',
   reservoir: '/images/water/reservoir.jpg',
+  pond: '/images/water/pond.jpg',
+  stream: '/images/water/stream.jpg',
+  estuary: '/images/water/estuary.jpg',
+  stillwater: '/images/water/stillwater.jpg',
+  loch: '/images/water/loch.jpg',
 };
 
 export function getWaterImage(waterType: string): string | null {
   return waterImageMap[waterType?.toLowerCase()] ?? null;
 }
+
+export { getMethodImage } from './baitMethods';
+

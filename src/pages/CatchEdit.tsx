@@ -11,15 +11,11 @@ import SelectDropdown from '../components/SelectDropdown';
 import ConditionsGrid from '../components/ConditionsGrid';
 import LocationPicker from '../components/LocationPicker';
 
-const WATER_TYPES: WaterType[] = ['sea', 'river', 'lake', 'canal', 'reservoir'];
+import { BAIT_METHODS } from '../lib/baitMethods';
 
-const METHODS = [
-  'Lure',
-  'Fly',
-  'Float',
-  'Ledger',
-  'Bait',
-];
+const WATER_TYPES: WaterType[] = ['sea', 'river', 'lake', 'canal', 'reservoir', 'pond', 'stream', 'estuary', 'stillwater', 'loch'];
+
+const METHODS = BAIT_METHODS.map((m) => m.name);
 
 export default function CatchEdit() {
   const { id } = useParams();

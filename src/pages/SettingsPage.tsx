@@ -5,7 +5,7 @@ import { useSettings } from '../hooks/useSettings';
 import { useAuth } from '../hooks/useAuth';
 import type { WaterType, Theme } from '../types';
 
-const WATER_TYPES: WaterType[] = ['sea', 'river', 'lake', 'canal', 'reservoir'];
+const WATER_TYPES: WaterType[] = ['sea', 'river', 'lake', 'canal', 'reservoir', 'pond', 'stream', 'estuary', 'stillwater', 'loch'];
 
 export default function SettingsPage() {
   const [settings, update] = useSettings();
