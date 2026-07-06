@@ -58,13 +58,18 @@ export async function pullRemoteCatches(userId: string) {
     .eq('deleted', false)
     .order('created_at', { ascending: false });
 
-  if (error || !data) return;
+  if (error || !data) {
+    console.error('pullRemoteCatches error:', error);
+    return;
+  }
 
   for (const row of data) {
     const existing = await db.catches.get(row.id);
     if (!existing) {
+      // New remote catch not in local DB — insert it
       await db.catches.put(fromRow(row));
     }
+    // If catch exists locally, keep local version (it may have newer edits)
   }
 }
 
@@ -136,6 +141,8 @@ export async function pullCalendarPlans(userId: string) {
 
 export async function fullSync(userId: string) {
   try {
+    const localCount = await db.catches.count();
+    console.log(`[sync] Starting fullSync for user ${userId}. Local catches: ${localCount}`);
     await pullRemoteCatches(userId);
     await pushLocalCatches(userId);
     // Sync settings
@@ -150,6 +157,8 @@ export async function fullSync(userId: string) {
     }
     await pullCalendarPlans(userId);
     await pushCalendarPlans(userId);
+    const afterCount = await db.catches.count();
+    console.log(`[sync] fullSync complete. Local catches: ${afterCount}`);
   } catch (e) {
     console.error('Sync error:', e);
   }

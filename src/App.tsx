@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { Download, X } from 'lucide-react';
 import Home from './pages/Home';
@@ -25,9 +25,11 @@ export default function App() {
   const [settings] = useSettings();
   const { user } = useAuth();
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const syncedUserId = useRef<string | null>(null);
 
   useEffect(() => {
-    if (user) {
+    if (user && syncedUserId.current !== user.id) {
+      syncedUserId.current = user.id;
       fullSync(user.id);
     }
   }, [user]);

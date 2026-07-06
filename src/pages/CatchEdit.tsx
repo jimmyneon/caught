@@ -51,8 +51,17 @@ export default function CatchEdit() {
     saveTimer.current = setTimeout(() => {
       const isComplete = !!(rec.species && rec.weightKg != null);
       db.catches.put({ ...rec, complete: isComplete });
+      saveTimer.current = null;
     }, 500);
-    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
+    return () => {
+      // On unmount/navigate away: flush pending save immediately instead of cancelling
+      if (saveTimer.current) {
+        clearTimeout(saveTimer.current);
+        saveTimer.current = null;
+        const isComplete = !!(rec.species && rec.weightKg != null);
+        db.catches.put({ ...rec, complete: isComplete });
+      }
+    };
   }, [rec]);
 
   if (!rec) return <div className="p-6 text-sm text-ink-3">Loading…</div>;

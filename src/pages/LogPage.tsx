@@ -30,9 +30,10 @@ export default function LogPage() {
   const catches = useLiveQuery(
     () => db.catches.orderBy('createdAt').reverse().toArray(),
     [],
-  ) ?? [];
-
-  const shown = filter === 'incomplete' ? catches.filter((c) => !c.complete) : catches;
+  );
+  const loaded = catches !== undefined;
+  const allCatches = catches ?? [];
+  const shown = filter === 'incomplete' ? allCatches.filter((c) => !c.complete) : allCatches;
 
   return (
     <div className="px-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-20">
@@ -48,14 +49,14 @@ export default function LogPage() {
           </button>
           <button
             className="rounded-full p-2 text-ink-3 transition-colors active:bg-surface-3"
-            onClick={() => exportCSV(catches)}
+            onClick={() => exportCSV(allCatches)}
             aria-label="Export CSV"
           >
             <FileDown size={20} />
           </button>
           <button
             className="rounded-full p-2 text-ink-3 transition-colors active:bg-surface-3"
-            onClick={() => exportPDF(catches, settings)}
+            onClick={() => exportPDF(allCatches, settings)}
             aria-label="Export PDF"
           >
             <FileText size={20} />
@@ -80,7 +81,9 @@ export default function LogPage() {
         ))}
       </div>
 
-      {shown.length === 0 ? (
+      {!loaded ? (
+        <div className="py-12 text-center text-sm text-ink-3">Loading…</div>
+      ) : shown.length === 0 ? (
         <EmptyState
           icon="log"
           title={filter === 'incomplete' ? 'Nothing to finish' : 'No catches yet'}

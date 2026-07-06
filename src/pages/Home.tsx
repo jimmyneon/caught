@@ -65,6 +65,13 @@ export default function Home() {
   const bgRef = useRef<HTMLImageElement>(null);
   useParallax(bgRef);
 
+  // Fallback: if bg image doesn't fire onLoad within 1.5s, show content anyway
+  useEffect(() => {
+    if (bgRef.current?.complete) setBgLoaded(true);
+    const timer = setTimeout(() => setBgLoaded(true), 1500);
+    return () => clearTimeout(timer);
+  }, []);
+
   // Show sync prompt every 3rd app open if not signed in (wait for auth to load)
   useEffect(() => {
     if (authLoading || user || !isSupabaseConfigured) return;
@@ -80,9 +87,9 @@ export default function Home() {
   const incompleteCatches = useLiveQuery(
     () => db.catches.filter((c) => !c.complete).toArray(),
     [],
-  ) ?? [];
+  );
 
-  const incomplete = incompleteCatches.length;
+  const incomplete = incompleteCatches?.length ?? 0;
 
   const todayStart = new Date().setHours(0, 0, 0, 0);
   const todayCount = useLiveQuery(
@@ -211,7 +218,7 @@ export default function Home() {
         {incomplete > 0 && (
           <button
             onClick={() => {
-              const first = incompleteCatches[0];
+              const first = incompleteCatches?.[0];
               if (first) navigate(`/catch/${first.id}`);
             }}
             className="mb-28 flex w-full items-center gap-3 rounded-2xl bg-white/8 p-3.5 backdrop-blur-md transition-transform active:scale-[0.98]"
