@@ -1,10 +1,12 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Plus, Sun, Moon, Cloud, LogOut, User, Search } from 'lucide-react';
+import { X, Plus, Sun, Moon, Cloud, LogOut, User, Search, Trash2, Check } from 'lucide-react';
 import { useSettings } from '../hooks/useSettings';
 import { useAuth } from '../hooks/useAuth';
 import type { WaterType, Theme } from '../types';
 import { BAIT_METHODS } from '../lib/baitMethods';
+import BottomSheet from '../components/BottomSheet';
+import { clearLocalData } from '../lib/clearData';
 
 const WATER_TYPES: WaterType[] = ['sea', 'river', 'lake', 'canal', 'reservoir', 'pond', 'stream', 'estuary', 'stillwater', 'loch'];
 
@@ -15,6 +17,7 @@ export default function SettingsPage() {
   const [newSpecies, setNewSpecies] = useState('');
   const [baitSearch, setBaitSearch] = useState(false);
   const [baitQuery, setBaitQuery] = useState('');
+  const [showSignOut, setShowSignOut] = useState(false);
 
   const addSpecies = () => {
     const s = newSpecies.trim();
@@ -271,7 +274,7 @@ export default function SettingsPage() {
               <button
                 className="flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold transition-colors active:bg-surface-3"
                 style={{ background: 'var(--c-surface-3)', color: 'var(--c-ink-2)' }}
-                onClick={async () => { await signOut(); navigate('/'); }}
+                onClick={() => setShowSignOut(true)}
               >
                 <LogOut size={16} /> Sign out
               </button>
@@ -292,6 +295,66 @@ export default function SettingsPage() {
           Caught v0.1 · {user ? 'Synced to cloud' : 'all data stored locally on your device'}
         </p>
       </div>
+
+      {/* Sign out confirmation */}
+      <BottomSheet open={showSignOut} onClose={() => setShowSignOut(false)} title="Sign out">
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-ink-3">
+            Choose what happens to your local data on this device.
+          </p>
+
+          {/* Option 1: Keep data */}
+          <button
+            className="flex items-start gap-3 rounded-xl p-4 text-left transition-colors active:bg-surface-3"
+            style={{ background: 'var(--c-surface-3)' }}
+            onClick={async () => {
+              setShowSignOut(false);
+              await signOut();
+              navigate('/');
+            }}
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ background: 'var(--c-accent-bg)' }}>
+              <Check size={20} style={{ color: 'var(--c-accent)' }} />
+            </div>
+            <div className="flex-1">
+              <div className="text-sm font-bold text-ink">Keep data on device</div>
+              <div className="mt-0.5 text-xs text-ink-3">
+                Your catches and settings stay on this device. Good if you'll sign back in later.
+              </div>
+            </div>
+          </button>
+
+          {/* Option 2: Clear data */}
+          <button
+            className="flex items-start gap-3 rounded-xl p-4 text-left transition-colors active:bg-surface-3"
+            style={{ background: 'var(--c-surface-3)', border: '1px solid var(--c-danger, #e53e3e)' }}
+            onClick={async () => {
+              setShowSignOut(false);
+              await signOut();
+              await clearLocalData();
+              navigate('/');
+            }}
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ background: 'rgba(229,62,62,0.1)' }}>
+              <Trash2 size={20} style={{ color: 'var(--c-danger, #e53e3e)' }} />
+            </div>
+            <div className="flex-1">
+              <div className="text-sm font-bold" style={{ color: 'var(--c-danger, #e53e3e)' }}>Clear all local data</div>
+              <div className="mt-0.5 text-xs text-ink-3">
+                Deletes all catches, settings, and plans from this device. Your cloud data is not affected. Use this on shared devices.
+              </div>
+            </div>
+          </button>
+
+          {/* Cancel */}
+          <button
+            className="text-center text-sm font-bold text-ink-3 py-2"
+            onClick={() => setShowSignOut(false)}
+          >
+            Cancel
+          </button>
+        </div>
+      </BottomSheet>
     </div>
   );
 }
