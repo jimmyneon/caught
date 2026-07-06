@@ -12,6 +12,7 @@ create table if not exists public.catches (
   weight_kg double precision,
   photo text,
   method text,
+  bait_sub_type text,
   water_type text,
   notes text,
   kept boolean,

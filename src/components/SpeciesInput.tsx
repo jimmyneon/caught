@@ -3,15 +3,16 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { ChevronDown, Check } from 'lucide-react';
 import { db } from '../db';
 import { useSettings } from '../hooks/useSettings';
-import { searchSpecies, FISH_SPECIES } from '../lib/fishSpecies';
+import { searchSpecies, FISH_SPECIES, getSuggestedSpecies } from '../lib/fishSpecies';
 import { getSpeciesImage } from '../lib/images';
 
 interface Props {
   value: string;
   onChange: (v: string) => void;
+  waterType?: string;
 }
 
-export default function SpeciesInput({ value, onChange }: Props) {
+export default function SpeciesInput({ value, onChange, waterType }: Props) {
   const [settings] = useSettings();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState(value);
@@ -44,11 +45,19 @@ export default function SpeciesInput({ value, onChange }: Props) {
     for (const s of settings.favouriteSpecies) counts.set(s, 1000);
     for (const c of catches) {
       if (!c.species) continue;
-      counts.set(c.species, (counts.get(c.species) ?? 0) + 1);
+      // Weight catches with same water type higher
+      const sameWater = waterType && c.waterType === waterType;
+      counts.set(c.species, (counts.get(c.species) ?? 0) + (sameWater ? 3 : 1));
+    }
+
+    // Water type suggestions (boost score)
+    const waterSuggestions = getSuggestedSpecies(waterType);
+    for (const s of waterSuggestions) {
+      counts.set(s, (counts.get(s) ?? 0) + 5);
     }
 
     // Get database matches
-    const dbMatches = q ? searchSpecies(q) : FISH_SPECIES.slice(0, 8);
+    const dbMatches = q ? searchSpecies(q) : FISH_SPECIES.slice(0, 12);
     const dbNames = new Set(dbMatches.map((s) => s.name));
 
     // Get user history matches (not already in db results)
@@ -56,26 +65,21 @@ export default function SpeciesInput({ value, onChange }: Props) {
       ? [...counts.entries()].filter(([s]) => s.toLowerCase().includes(q) && !dbNames.has(s))
       : [...counts.entries()].filter(([s]) => !dbNames.has(s));
 
-    // Combine: db results first (sorted by relevance), then user history
+    // Combine: db results first (sorted by score), then user history
     const combined: { name: string; fromDb: boolean; count: number }[] = [
       ...dbMatches.map((s) => ({ name: s.name, fromDb: true, count: counts.get(s.name) ?? 0 })),
       ...userMatches.map(([s, c]) => ({ name: s, fromDb: false, count: c })),
     ];
 
-    // Sort: favourites/high-count first within db results, then alphabetical
+    // Sort: highest score first (combines favourites, history, water type)
     return combined
       .sort((a, b) => {
-        if (a.fromDb && b.fromDb) {
-          if (b.count !== a.count) return b.count - a.count;
-          return a.name.localeCompare(b.name);
-        }
-        if (a.fromDb && !b.fromDb) return -1;
-        if (!a.fromDb && b.fromDb) return 1;
-        return b.count - a.count;
+        if (b.count !== a.count) return b.count - a.count;
+        return a.name.localeCompare(b.name);
       })
       .slice(0, 8)
       .map((s) => s.name);
-  }, [catches, settings.favouriteSpecies, query]);
+  }, [catches, settings.favouriteSpecies, query, waterType]);
 
   return (
     <div ref={ref} className="relative">

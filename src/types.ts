@@ -30,6 +30,7 @@ export interface CatchRecord {
   weightKg?: number;
   photo?: string;
   method?: string;
+  baitSubType?: string;
   waterType?: WaterType;
   notes?: string;
   kept?: boolean;

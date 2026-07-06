@@ -102,7 +102,7 @@ export default function CatchEdit() {
           ) : null;
         })()}
 
-        <SpeciesInput value={rec.species ?? ''} onChange={(species) => patch({ species })} />
+        <SpeciesInput value={rec.species ?? ''} onChange={(species) => patch({ species })} waterType={rec.waterType} />
 
         <WeightInput
           valueKg={rec.weightKg}
@@ -160,8 +160,10 @@ export default function CatchEdit() {
             {/* Method dropdown */}
             <MethodSelect
               value={rec.method}
+              subType={rec.baitSubType}
               species={rec.species}
               onChange={(method) => patch({ method })}
+              onSubTypeChange={(baitSubType) => patch({ baitSubType })}
             />
 
             {/* Water type dropdown */}

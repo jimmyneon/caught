@@ -95,3 +95,22 @@ export function searchSpecies(query: string): FishSpecies[] {
     return false;
   }).slice(0, 8);
 }
+
+// Water type → likely species mapping (ordered by likelihood)
+export const WATER_TYPE_SPECIES: Record<string, string[]> = {
+  stillwater: ['Rainbow Trout', 'Brown Trout', 'Carp', 'Mirror Carp', 'Tench', 'Bream', 'Perch', 'Pike', 'Crucian Carp', 'Roach'],
+  loch: ['Rainbow Trout', 'Brown Trout', 'Arctic Char', 'Pike', 'Perch', 'Salmon', 'Sea Trout'],
+  lake: ['Rainbow Trout', 'Carp', 'Mirror Carp', 'Tench', 'Bream', 'Perch', 'Pike', 'Roach', 'Crucian Carp'],
+  reservoir: ['Rainbow Trout', 'Brown Trout', 'Pike', 'Perch', 'Roach', 'Bream'],
+  river: ['Brown Trout', 'Barbel', 'Chub', 'Roach', 'Dace', 'Grayling', 'Pike', 'Perch', 'Salmon', 'Sea Trout'],
+  stream: ['Brown Trout', 'Rainbow Trout', 'Minnow', 'Bullhead', 'Dace', 'Grayling'],
+  canal: ['Carp', 'Roach', 'Perch', 'Pike', 'Tench', 'Bream', 'Zander'],
+  pond: ['Carp', 'Crucian Carp', 'Tench', 'Roach', 'Perch', 'Rudd'],
+  sea: ['Bass', 'Mackerel', 'Pollack', 'Wrasse', 'Ballan Wrasse', 'Flounder', 'Cod', 'Whiting', 'Ray', 'Dogfish'],
+  estuary: ['Bass', 'Flounder', 'Mullet', 'Eel', 'Pollack', 'Whiting'],
+};
+
+export function getSuggestedSpecies(waterType?: string): string[] {
+  if (!waterType) return [];
+  return WATER_TYPE_SPECIES[waterType] ?? [];
+}
