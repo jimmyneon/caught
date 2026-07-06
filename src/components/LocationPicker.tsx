@@ -78,7 +78,7 @@ export default function LocationPicker({ lat, lon, onChange }: Props) {
   return (
     <>
       {lat != null && lon != null ? (
-        <div className="flex items-center gap-2">
+        <div className="flex items-stretch gap-2">
           <a
             href={`https://www.google.com/maps/search/?api=1&query=${lat},${lon}`}
             target="_blank"
@@ -94,11 +94,11 @@ export default function LocationPicker({ lat, lon, onChange }: Props) {
             </div>
           </a>
           <button
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
-            style={{ background: 'var(--c-accent-bg)', color: 'var(--c-accent)' }}
+            className="field flex shrink-0 items-center justify-center"
+            style={{ width: '3.25rem', color: 'var(--c-accent)' }}
             onClick={openPicker}
           >
-            <MapPin size={18} />
+            <MapPin size={20} />
           </button>
         </div>
       ) : (

@@ -7,24 +7,29 @@ interface Props {
   unit: string;
 }
 
-const ITEM_HEIGHT = 40;
+const ITEM_HEIGHT = 44;
 const VISIBLE = 5;
 
 export default function SpinWheel({ values, value, onChange, unit }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const scrollTimer = useRef<number | null>(null);
+  const isExternalScroll = useRef(false);
 
   const selectedIndex = values.indexOf(value);
-  const initialIndex = selectedIndex >= 0 ? selectedIndex : 0;
+  const targetIndex = selectedIndex >= 0 ? selectedIndex : 0;
 
-  // Set initial scroll position on mount
+  // Scroll to the selected value on mount AND when value changes externally
   useEffect(() => {
-    if (ref.current) {
-      ref.current.scrollTop = initialIndex * ITEM_HEIGHT;
+    if (!ref.current) return;
+    const currentScroll = Math.round(ref.current.scrollTop / ITEM_HEIGHT);
+    if (currentScroll !== targetIndex) {
+      isExternalScroll.current = true;
+      ref.current.scrollTo({ top: targetIndex * ITEM_HEIGHT, behavior: 'smooth' });
     }
-  }, []);
+  }, [value]);
 
   const handleScroll = () => {
+    if (isExternalScroll.current) return;
     if (scrollTimer.current) clearTimeout(scrollTimer.current);
     scrollTimer.current = window.setTimeout(() => {
       if (!ref.current) return;
@@ -37,35 +42,44 @@ export default function SpinWheel({ values, value, onChange, unit }: Props) {
       if (values[clamped] !== value) {
         onChange(values[clamped]);
       }
-    }, 80);
+    }, 100);
+  };
+
+  const handleScrollEnd = () => {
+    isExternalScroll.current = false;
   };
 
   const padding = (VISIBLE - 1) / 2;
 
   return (
     <div className="flex flex-1 flex-col items-center">
-      <div className="mb-1.5 text-[10px] font-bold text-ink-3">{unit}</div>
+      <div className="mb-2 text-xs font-bold text-ink-3">{unit}</div>
       <div className="relative w-full" style={{ height: VISIBLE * ITEM_HEIGHT }}>
-        {/* Center highlight bar */}
+        {/* Center highlight bar — BEHIND content */}
         <div
-          className="pointer-events-none absolute left-2 right-2 z-10 rounded-lg"
+          className="pointer-events-none absolute left-1 right-1 rounded-xl"
           style={{
             top: padding * ITEM_HEIGHT,
             height: ITEM_HEIGHT,
             background: 'var(--c-surface-3)',
+            borderTop: '2px solid var(--c-accent)',
+            borderBottom: '2px solid var(--c-accent)',
+            zIndex: 0,
           }}
         />
-        {/* Top/bottom fade */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-10" style={{ height: padding * ITEM_HEIGHT, background: 'linear-gradient(180deg, var(--c-surface-2) 0%, transparent 100%)' }} />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10" style={{ height: padding * ITEM_HEIGHT, background: 'linear-gradient(0deg, var(--c-surface-2) 0%, transparent 100%)' }} />
+        {/* Top/bottom fade — above content for fade effect */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-20" style={{ height: padding * ITEM_HEIGHT, background: 'linear-gradient(180deg, var(--c-surface-2) 60%, transparent 100%)' }} />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20" style={{ height: padding * ITEM_HEIGHT, background: 'linear-gradient(0deg, var(--c-surface-2) 60%, transparent 100%)' }} />
         <div
           ref={ref}
           onScroll={handleScroll}
-          className="h-full w-full overflow-y-auto"
+          onScrollEnd={handleScrollEnd}
+          className="relative h-full w-full overflow-y-auto"
           style={{
             scrollSnapType: 'y mandatory',
             scrollbarWidth: 'none',
             WebkitOverflowScrolling: 'touch',
+            zIndex: 1,
           }}
         >
           {/* Top padding */}
@@ -75,15 +89,15 @@ export default function SpinWheel({ values, value, onChange, unit }: Props) {
             return (
               <div
                 key={v}
-                className="flex items-center justify-center"
+                className="flex items-center justify-center tabular-nums"
                 style={{
                   height: ITEM_HEIGHT,
                   scrollSnapAlign: 'center',
-                  fontSize: isSelected ? '1.25rem' : '1rem',
-                  fontWeight: isSelected ? 800 : 500,
+                  fontSize: isSelected ? '1.5rem' : '1.05rem',
+                  fontWeight: isSelected ? 800 : 600,
                   color: isSelected ? 'var(--c-ink)' : 'var(--c-ink-3)',
-                  opacity: isSelected ? 1 : 0.5,
-                  transition: 'font-size 0.1s, font-weight 0.1s',
+                  opacity: isSelected ? 1 : 0.35,
+                  transition: 'font-size 0.15s, font-weight 0.15s, opacity 0.15s',
                 }}
               >
                 {v}

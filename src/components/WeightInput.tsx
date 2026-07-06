@@ -79,21 +79,25 @@ export default function WeightInput({ valueKg, units, onChange }: Props) {
       </button>
 
       <BottomSheet open={open} onClose={() => setOpen(false)} title="Weight">
-        <div className="flex flex-col gap-5">
-          {/* Clear — always visible */}
-          <div className="flex justify-end">
+        <div className="flex h-full flex-col">
+          {/* Clear — styled as a proper button row */}
+          <div className="flex items-center justify-between pb-3">
+            <span className="text-sm font-bold text-ink-3">
+              {hasValue ? formatWeight(valueKg!, units) : 'No weight set'}
+            </span>
             <button
               type="button"
-              className="flex items-center gap-1 text-xs font-bold text-ink-3"
+              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-colors active:opacity-60"
+              style={{ background: 'var(--c-surface-3)', color: 'var(--c-ink-2)' }}
               onClick={clear}
             >
               <X size={14} /> Clear
             </button>
           </div>
 
-          {/* Spin wheels */}
-          <div className="rounded-2xl p-4" style={{ background: 'var(--c-surface-2)' }}>
-            <div className="flex items-stretch gap-3">
+          {/* Spin wheels — take available space */}
+          <div className="flex-1 rounded-2xl p-4" style={{ background: 'var(--c-surface-2)' }}>
+            <div className="flex items-stretch gap-4">
               {units === 'metric' ? (
                 <>
                   <SpinWheel
@@ -128,10 +132,12 @@ export default function WeightInput({ valueKg, units, onChange }: Props) {
             </div>
           </div>
 
-          {/* Done at bottom */}
-          <button className="btn-primary flex items-center justify-center gap-2" onClick={() => setOpen(false)}>
-            <Check size={18} /> Done
-          </button>
+          {/* Done — pinned at bottom */}
+          <div className="pt-4 pb-2">
+            <button className="btn-primary flex w-full items-center justify-center gap-2" onClick={() => setOpen(false)}>
+              <Check size={18} /> Done
+            </button>
+          </div>
         </div>
       </BottomSheet>
     </div>

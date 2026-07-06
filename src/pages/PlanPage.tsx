@@ -9,6 +9,7 @@ import { fmtDate } from '../lib/format';
 import { searchLocations, type GeoLocation } from '../lib/geoSearch';
 import BottomSheet from '../components/BottomSheet';
 import MapPreview from '../components/MapPreview';
+import MapPinPicker from '../components/MapPinPicker';
 
 function ratingColor(rating: DayScore['rating']): string {
   switch (rating) {
@@ -72,6 +73,7 @@ export default function PlanPage() {
   const [showLocationMenu, setShowLocationMenu] = useState(false);
   const [calendarConfirm, setCalendarConfirm] = useState<DayScore | null>(null);
   const [previewLoc, setPreviewLoc] = useState<GeoLocation | null>(null);
+  const [showMapPicker, setShowMapPicker] = useState(false);
 
   const longPressTimer = useRef<number | null>(null);
 
@@ -213,63 +215,75 @@ export default function PlanPage() {
       </div>
 
       {/* Location slide-up */}
-      <BottomSheet open={showLocationMenu} onClose={() => { setShowLocationMenu(false); setPreviewLoc(null); }}>
-        <div className="flex flex-col gap-3">
+      <BottomSheet open={showLocationMenu} fullHeight onClose={() => { setShowLocationMenu(false); setPreviewLoc(null); setShowMapPicker(false); }}>
+        <div className="flex h-full flex-col gap-3">
           <h2 className="text-xl font-extrabold text-ink">Location</h2>
 
-          <button
-            className="flex w-full items-center gap-3 rounded-xl p-3.5 text-sm font-bold transition-colors active:bg-surface-3"
-            style={{ background: locationMode === 'current' ? 'var(--c-accent-bg)' : 'var(--c-surface-3)', color: locationMode === 'current' ? 'var(--c-accent)' : 'var(--c-ink)' }}
-            onClick={() => { setLocationMode('current'); setLocation(null); setShowLocationMenu(false); }}
-          >
-            <Navigation size={18} /> Use current location
-            {locationMode === 'current' && <Check size={16} className="ml-auto" />}
-          </button>
+          {!showMapPicker && !previewLoc && (
+            <>
+              <button
+                className="flex w-full items-center gap-3 rounded-xl p-3.5 text-sm font-bold transition-colors active:bg-surface-3"
+                style={{ background: locationMode === 'current' ? 'var(--c-accent-bg)' : 'var(--c-surface-3)', color: locationMode === 'current' ? 'var(--c-accent)' : 'var(--c-ink)' }}
+                onClick={() => { setLocationMode('current'); setLocation(null); setShowLocationMenu(false); }}
+              >
+                <Navigation size={18} /> Use current location
+                {locationMode === 'current' && <Check size={16} className="ml-auto" />}
+              </button>
 
-          <div className="flex items-center gap-2">
-            <div className="h-px flex-1" style={{ background: 'var(--c-line)' }} />
-            <span className="text-xs font-bold text-ink-3">OR SEARCH</span>
-            <div className="h-px flex-1" style={{ background: 'var(--c-line)' }} />
-          </div>
+              <button
+                className="flex w-full items-center gap-3 rounded-xl p-3.5 text-sm font-bold transition-colors active:bg-surface-3"
+                style={{ background: 'var(--c-surface-3)', color: 'var(--c-ink)' }}
+                onClick={() => setShowMapPicker(true)}
+              >
+                <MapPin size={18} style={{ color: 'var(--c-accent)' }} /> Choose on map
+              </button>
 
-          <div className="relative">
-            <input
-              className="field"
-              style={{ paddingLeft: '2.75rem', paddingRight: '2.25rem' }}
-              placeholder="Search a town or city…"
-              value={searchQuery}
-              onChange={(e) => { setSearchQuery(e.target.value); setLocationMode('search'); }}
-            />
-            <Search size={18} style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--c-ink-3)', pointerEvents: 'none' }} />
-            {searching && <Loader2 size={16} className="animate-spin absolute right-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--c-ink-3)' }} />}
-          </div>
+              <div className="flex items-center gap-2">
+                <div className="h-px flex-1" style={{ background: 'var(--c-line)' }} />
+                <span className="text-xs font-bold text-ink-3">OR SEARCH</span>
+                <div className="h-px flex-1" style={{ background: 'var(--c-line)' }} />
+              </div>
 
-          {searchResults.length > 0 && !previewLoc && (
-            <div className="flex flex-col gap-1.5">
-              {searchResults.map((r) => (
-                <button
-                  key={`${r.lat}-${r.lon}`}
-                  className="flex w-full items-center gap-2 rounded-xl p-3 text-left text-sm transition-colors active:bg-surface-3"
-                  style={{ background: 'var(--c-surface-3)' }}
-                  onClick={() => setPreviewLoc(r)}
-                >
-                  <MapPin size={16} style={{ color: 'var(--c-ink-3)' }} />
-                  <div className="flex flex-1 flex-col">
-                    <span className="font-bold text-ink">{r.name}</span>
-                    {r.country && <span className="text-xs text-ink-3">{r.country}</span>}
-                  </div>
-                  {r.distance != null && (
-                    <span className="shrink-0 text-xs font-bold" style={{ color: 'var(--c-ink-3)' }}>
-                      {r.distance < 1 ? '<1 km' : `${Math.round(r.distance)} km`}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
+              <div className="relative">
+                <input
+                  className="field"
+                  style={{ paddingLeft: '2.75rem', paddingRight: '2.25rem' }}
+                  placeholder="Search a town or city…"
+                  value={searchQuery}
+                  onChange={(e) => { setSearchQuery(e.target.value); setLocationMode('search'); }}
+                />
+                <Search size={18} style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--c-ink-3)', pointerEvents: 'none' }} />
+                {searching && <Loader2 size={16} className="animate-spin absolute right-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--c-ink-3)' }} />}
+              </div>
+
+              {searchResults.length > 0 && (
+                <div className="flex flex-col gap-1.5">
+                  {searchResults.map((r) => (
+                    <button
+                      key={`${r.lat}-${r.lon}`}
+                      className="flex w-full items-center gap-2 rounded-xl p-3 text-left text-sm transition-colors active:bg-surface-3"
+                      style={{ background: 'var(--c-surface-3)' }}
+                      onClick={() => setPreviewLoc(r)}
+                    >
+                      <MapPin size={16} style={{ color: 'var(--c-ink-3)' }} />
+                      <div className="flex flex-1 flex-col">
+                        <span className="font-bold text-ink">{r.name}</span>
+                        {r.country && <span className="text-xs text-ink-3">{r.country}</span>}
+                      </div>
+                      {r.distance != null && (
+                        <span className="shrink-0 text-xs font-bold" style={{ color: 'var(--c-ink-3)' }}>
+                          {r.distance < 1 ? '<1 km' : `${Math.round(r.distance)} km`}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
           )}
 
           {previewLoc && (
-            <div className="flex flex-col gap-3">
+            <div className="flex h-full flex-col gap-3">
               <button
                 className="flex items-center gap-2 text-sm font-bold text-ink-3"
                 onClick={() => setPreviewLoc(null)}
@@ -280,7 +294,9 @@ export default function PlanPage() {
                 <span className="font-bold text-ink">{previewLoc.name}</span>
                 {previewLoc.country && <span className="text-xs text-ink-3">{previewLoc.country}</span>}
               </div>
-              <MapPreview lat={previewLoc.lat} lon={previewLoc.lon} />
+              <div className="flex-1 overflow-hidden rounded-xl">
+                <MapPreview lat={previewLoc.lat} lon={previewLoc.lon} height={300} userLat={userCoords?.lat} userLon={userCoords?.lon} />
+              </div>
               <button
                 className="btn-primary flex items-center justify-center gap-2"
                 onClick={() => {
@@ -295,6 +311,20 @@ export default function PlanPage() {
                 <Check size={18} /> Use this location
               </button>
             </div>
+          )}
+
+          {showMapPicker && (
+            <MapPinPicker
+              initialLat={userCoords?.lat}
+              initialLon={userCoords?.lon}
+              onBack={() => setShowMapPicker(false)}
+              onConfirm={(lat, lon) => {
+                setLocation({ lat, lon, name: `${lat.toFixed(4)}, ${lon.toFixed(4)}` });
+                setLocationMode('search');
+                setShowMapPicker(false);
+                setShowLocationMenu(false);
+              }}
+            />
           )}
         </div>
       </BottomSheet>

@@ -48,15 +48,23 @@ export async function searchLocations(
 
     let results: GeoLocation[] = data.map((r: any) => {
       const a = r.address ?? {};
-      // Build a descriptive subtitle: county, state_district, country
+      // Use r.name (the actual place name from Nominatim) — NOT a.city
+      // because in the UK, a.city often contains the district/borough name
+      // e.g. Lyndhurst has address.city = "New Forest"
+      const name = r.name
+        ?? a.village ?? a.town ?? a.hamlet ?? a.suburb
+        ?? r.display_name?.split(',')[0]
+        ?? 'Unknown';
+      // Subtitle: county, state, country — skip city (district name)
       const parts = [
-        a.county ?? a.state_district ?? a.city_district ?? a.state,
+        a.county ?? a.state_district,
+        a.state,
         a.country,
       ].filter(Boolean);
       return {
         lat: parseFloat(r.lat),
         lon: parseFloat(r.lon),
-        name: a.city ?? a.town ?? a.village ?? a.hamlet ?? r.display_name?.split(',')[0] ?? 'Unknown',
+        name,
         country: parts.join(', '),
         countryCode: a.country_code?.toUpperCase(),
       };

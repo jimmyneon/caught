@@ -6,6 +6,7 @@ interface Props {
   children: ReactNode;
   title?: string;
   onClose?: () => void;
+  fullHeight?: boolean;
 }
 
 let openCount = 0;
@@ -22,7 +23,7 @@ function setBodyScroll(disabled: boolean) {
   }
 }
 
-export default function BottomSheet({ open, children, title, onClose }: Props) {
+export default function BottomSheet({ open, children, title, onClose, fullHeight }: Props) {
   const [dragY, setDragY] = useState(0);
   const startY = useRef<number | null>(null);
   const [visible, setVisible] = useState(false);
@@ -104,7 +105,7 @@ export default function BottomSheet({ open, children, title, onClose }: Props) {
         onClick={onClose}
       />
       <div
-        className="glass relative w-full max-w-md max-h-[85vh] min-h-[50vh] overflow-y-auto rounded-t-3xl pb-[env(safe-area-inset-bottom)]"
+        className={`glass relative w-full max-w-md overflow-y-auto rounded-t-3xl pb-[env(safe-area-inset-bottom)] ${fullHeight ? 'h-[calc(100vh-0.5rem)]' : 'max-h-[85vh] min-h-[50vh]'}`}
         style={{
           transform: `translateY(${translateY}px)`,
           transition: dragY === 0 ? 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
