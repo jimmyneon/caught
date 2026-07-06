@@ -90,7 +90,7 @@ export default function WeightInput({ valueKg, units, onChange }: Props) {
 
       <BottomSheet open={open} onClose={() => setOpen(false)} fullHeight>
         <div className="flex h-full flex-col">
-          {/* Header with unit label */}
+          {/* Header */}
           <div className="pb-2 text-center">
             <h2 className="text-xl font-extrabold text-ink">Weight</h2>
             <p className="mt-0.5 text-xs font-medium text-ink-3">
@@ -98,9 +98,9 @@ export default function WeightInput({ valueKg, units, onChange }: Props) {
             </p>
           </div>
 
-          {/* Spin wheels — take all available space */}
-          <div className="flex flex-1 items-center rounded-2xl p-4" style={{ background: 'var(--c-surface-2)' }}>
-            <div className="flex items-stretch gap-4 w-full">
+          {/* Spin wheels — take all available space, vertically centered */}
+          <div className="flex flex-1 items-center justify-center rounded-2xl p-3" style={{ background: 'var(--c-surface-2)' }}>
+            <div className="flex items-stretch gap-6 w-full">
               {units === 'metric' ? (
                 <>
                   <SpinWheel
@@ -135,8 +135,8 @@ export default function WeightInput({ valueKg, units, onChange }: Props) {
             </div>
           </div>
 
-          {/* Bottom buttons — Clear and Done side by side */}
-          <div className="flex gap-3 pt-4 pb-2">
+          {/* Bottom buttons — Clear and Done */}
+          <div className="flex gap-3 pt-3 pb-2">
             <button
               type="button"
               className="flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold transition-colors active:opacity-60"

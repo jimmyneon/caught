@@ -25,11 +25,11 @@ function setBodyScroll(disabled: boolean) {
 
 export default function BottomSheet({ open, children, title, onClose, fullHeight }: Props) {
   const [dragY, setDragY] = useState(0);
-  const startY = useRef<number | null>(null);
   const [visible, setVisible] = useState(false);
-  const handleRef = useRef<HTMLDivElement>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
   const dragYRef = useRef(0);
   const startYRef = useRef<number | null>(null);
+  const isDraggingRef = useRef(false);
   const onCloseRef = useRef(onClose);
 
   useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
@@ -47,34 +47,43 @@ export default function BottomSheet({ open, children, title, onClose, fullHeight
     }
   }, [open]);
 
-  // Native non-passive touch listener on handle for reliable preventDefault
+  // Drag-to-close on the entire sheet (not just the handle)
   useEffect(() => {
-    const el = handleRef.current;
+    const el = sheetRef.current;
     if (!el) return;
 
     const onTouchStart = (e: TouchEvent) => {
+      // Only start drag tracking if touch starts on the sheet
       startYRef.current = e.touches[0].clientY;
-      startY.current = e.touches[0].clientY;
+      isDraggingRef.current = false;
     };
 
     const onTouchMove = (e: TouchEvent) => {
       if (startYRef.current == null) return;
       const delta = e.touches[0].clientY - startYRef.current;
+
+      // Only drag down (positive delta)
       if (delta > 0) {
-        e.preventDefault();
-        dragYRef.current = delta;
-        setDragY(delta);
+        // Check if content is scrolled to top
+        const scrollTop = el.scrollTop;
+        if (scrollTop <= 0) {
+          // Content at top — start dragging the sheet
+          isDraggingRef.current = true;
+          e.preventDefault();
+          dragYRef.current = delta;
+          setDragY(delta);
+        }
       }
     };
 
     const onTouchEnd = () => {
-      if (dragYRef.current > 100) {
+      if (isDraggingRef.current && dragYRef.current > 100) {
         onCloseRef.current?.();
       }
       dragYRef.current = 0;
       setDragY(0);
       startYRef.current = null;
-      startY.current = null;
+      isDraggingRef.current = false;
     };
 
     el.addEventListener('touchstart', onTouchStart, { passive: true });
@@ -105,17 +114,18 @@ export default function BottomSheet({ open, children, title, onClose, fullHeight
         onClick={onClose}
       />
       <div
+        ref={sheetRef}
         className={`glass relative w-full max-w-md overflow-y-auto rounded-t-3xl pb-[env(safe-area-inset-bottom)] ${fullHeight ? 'h-[calc(100vh-0.5rem)]' : 'max-h-[85vh] min-h-[50vh]'}`}
         style={{
           transform: `translateY(${translateY}px)`,
           transition: dragY === 0 ? 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
           overscrollBehavior: 'contain',
+          touchAction: 'pan-y',
         }}
       >
         <div
-          ref={handleRef}
           className="sticky top-0 z-10 flex items-center justify-center pt-3 pb-2"
-          style={{ cursor: 'grab', touchAction: 'none' }}
+          style={{ cursor: 'grab' }}
         >
           <div className="h-1 w-10 rounded-full" style={{ background: 'var(--c-line)' }} />
         </div>

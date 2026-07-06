@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Settings as SettingsIcon, Check, Plus, Cloud, X } from 'lucide-react';
+import { Settings as SettingsIcon, Check, Plus, Cloud } from 'lucide-react';
 import { db } from '../db';
 import type { CatchRecord } from '../types';
-import { enrichCatch } from '../lib/enrich';
+import { enrichCatch, retryPendingEnrichment } from '../lib/enrich';
 import { useSettings } from '../hooks/useSettings';
 import { useAuth } from '../hooks/useAuth';
 import BottomSheet from '../components/BottomSheet';
@@ -59,8 +59,10 @@ export default function Home() {
   const { user, loading: authLoading, isSupabaseConfigured } = useAuth();
   const [savedId, setSavedId] = useState<string | null>(null);
   const [ripples, setRipples] = useState<{ id: number; x: number; y: number }[]>([]);
-  const [showSyncPrompt, setShowSyncPrompt] = useState(false);
   const [bgLoaded, setBgLoaded] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [pullDist, setPullDist] = useState(0);
+  const touchStartY = useRef<number | null>(null);
   const rippleId = useRef(0);
   const bgRef = useRef<HTMLImageElement>(null);
   useParallax(bgRef);
@@ -72,17 +74,40 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Show sync prompt every 3rd app open if not signed in (wait for auth to load)
-  useEffect(() => {
-    if (authLoading || user || !isSupabaseConfigured) return;
-    const dismissed = localStorage.getItem('caught_sync_prompt_dismissed');
-    if (dismissed) return;
-    const opens = parseInt(localStorage.getItem('caught_app_opens') ?? '0', 10) + 1;
-    localStorage.setItem('caught_app_opens', String(opens));
-    if (opens % 3 === 0) {
-      setShowSyncPrompt(true);
+  // Pull-to-refresh: only when scrolled to top and no BottomSheet open
+  const isSignedIn = !!user;
+  const showSignInBanner = !authLoading && !isSignedIn && isSupabaseConfigured;
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (savedId) return; // BottomSheet open
+    const main = document.querySelector('main');
+    if (main && main.scrollTop === 0) {
+      touchStartY.current = e.touches[0].clientY;
+    } else {
+      touchStartY.current = null;
     }
-  }, [user, authLoading, isSupabaseConfigured]);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStartY.current == null || savedId) return;
+    const delta = e.touches[0].clientY - touchStartY.current;
+    if (delta > 0 && delta < 120) {
+      setPullDist(delta * 0.5);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (pullDist > 50 && !savedId) {
+      setRefreshing(true);
+      // Trigger refresh — re-run enrichment for any pending catches
+      retryPendingEnrichment(settings.saveLocation);
+      setTimeout(() => {
+        setRefreshing(false);
+      }, 1200);
+    }
+    setPullDist(0);
+    touchStartY.current = null;
+  };
 
   const incompleteCatches = useLiveQuery(
     async () => {
@@ -159,7 +184,25 @@ export default function Home() {
       />
 
       {/* Content */}
-      <div className={`relative z-10 flex h-full flex-col overflow-hidden px-6 pt-[calc(1.5rem+env(safe-area-inset-top))] transition-opacity duration-300 ${bgLoaded ? 'opacity-100' : 'opacity-0'}`} style={{ overscrollBehavior: 'none' }}>
+      <div
+        className={`relative z-10 flex h-full flex-col overflow-hidden px-6 pt-[calc(1.5rem+env(safe-area-inset-top))] transition-opacity duration-300 ${bgLoaded ? 'opacity-100' : 'opacity-0'}`}
+        style={{ overscrollBehavior: 'none', transform: pullDist > 0 ? `translateY(${pullDist}px)` : undefined, transition: pullDist === 0 ? 'transform 0.2s ease-out' : 'none' }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        {/* Pull-to-refresh indicator */}
+        {(pullDist > 0 || refreshing) && (
+          <div className="absolute left-1/2 top-2 -translate-x-1/2" style={{ opacity: Math.min(pullDist / 50, 1) }}>
+            <div className={`flex h-8 w-8 items-center justify-center rounded-full bg-white/15 backdrop-blur-md ${refreshing ? 'animate-spin' : ''}`}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: refreshing ? 'none' : `rotate(${pullDist * 3}deg)` }}>
+                <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+                <path d="M21 3v5h-5" />
+              </svg>
+            </div>
+          </div>
+        )}
+
         <header className="flex items-center justify-between">
           <h1 className="text-lg font-extrabold tracking-tight text-white">
             Caught
@@ -173,23 +216,19 @@ export default function Home() {
           </Link>
         </header>
 
-        {/* Sync prompt — dismissible */}
-        {showSyncPrompt && (
-          <div className="mt-3 flex items-center gap-3 rounded-2xl bg-white/10 p-3 backdrop-blur-md animate-fade-in">
+        {/* Persistent sign-in banner — always visible when not signed in */}
+        {showSignInBanner && (
+          <button
+            className="mt-3 flex w-full items-center gap-3 rounded-2xl bg-white/10 p-3 backdrop-blur-md transition-transform active:scale-[0.98] animate-fade-in"
+            onClick={() => navigate('/auth')}
+          >
             <Cloud size={18} className="shrink-0 text-white/80" />
-            <button
-              className="flex-1 text-left text-sm font-semibold text-white"
-              onClick={() => { setShowSyncPrompt(false); navigate('/auth'); }}
-            >
-              Secure your data — sign in for cloud sync
-            </button>
-            <button
-              className="shrink-0 rounded-full p-1 text-white/50 active:bg-white/10"
-              onClick={() => { setShowSyncPrompt(false); localStorage.setItem('caught_sync_prompt_dismissed', '1'); }}
-            >
-              <X size={16} />
-            </button>
-          </div>
+            <div className="flex-1 text-left">
+              <div className="text-sm font-bold text-white">Not signed in</div>
+              <div className="text-xs text-white/60">Sign in to back up your catches to the cloud</div>
+            </div>
+            <span className="shrink-0 rounded-full bg-white/15 px-3 py-1 text-xs font-bold text-white">Sign in</span>
+          </button>
         )}
 
         {/* Center: Record button */}
@@ -242,7 +281,7 @@ export default function Home() {
 
       {/* Catch saved slide-up */}
       <BottomSheet open={!!savedId} onClose={() => setSavedId(null)}>
-        <div className="flex flex-col items-center gap-4">
+        <div className="flex min-h-[60vh] flex-col items-center gap-4">
           <div
             className="flex h-14 w-14 items-center justify-center rounded-full animate-check-pop"
             style={{ background: 'var(--c-accent-bg)' }}
@@ -255,6 +294,7 @@ export default function Home() {
               Time, location &amp; conditions saved automatically.
             </p>
           </div>
+          <div className="flex-1" />
           <button
             className="btn-primary w-full"
             onClick={() => {
