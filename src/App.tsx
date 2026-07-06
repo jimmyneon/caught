@@ -41,13 +41,20 @@ export default function App() {
     }
   }, [user]);
 
-  // Quick sync when coming back online
+  // Quick sync when coming back online or returning to the app
   useEffect(() => {
     const onOnline = () => {
       if (user) quickSync(user.id);
     };
+    const onVisible = () => {
+      if (document.visibilityState === 'visible' && user) quickSync(user.id);
+    };
     window.addEventListener('online', onOnline);
-    return () => window.removeEventListener('online', onOnline);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.removeEventListener('online', onOnline);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [user]);
 
   // Set theme-color based on route + theme

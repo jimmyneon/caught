@@ -47,19 +47,20 @@ export default function CatchEdit() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  // Auto-save: write to db immediately on every change (no debounce)
-  // Mark as unsynced so the push queue picks it up
-  useEffect(() => {
-    if (!rec) return;
-    const isComplete = !!(rec.species && rec.weightKg != null);
-    db.catches.put({ ...rec, complete: isComplete, syncedAt: 0 }).catch((e) => 
-      console.error('[CatchEdit] save error:', e)
-    );
-  }, [rec]);
-
   if (!rec) return <div className="p-6 text-sm text-ink-3">Loading…</div>;
 
   const patch = (p: Partial<CatchRecord>) => setRec({ ...rec, ...p });
+
+  // Save to local DB, then navigate. Never block on sync.
+  const saveAndNavigate = async (to: number | string) => {
+    try {
+      const isComplete = !!(rec.species && rec.weightKg != null);
+      await db.catches.put({ ...rec, complete: isComplete, syncedAt: 0 });
+    } catch (e) {
+      console.error('[CatchEdit] save error:', e);
+    }
+    navigate(to as any);
+  };
 
   const remove = async () => {
     if (confirm('Delete this catch?')) {
@@ -74,7 +75,7 @@ export default function CatchEdit() {
       <div className="flex flex-col items-center gap-2 mb-6">
         <button
           className="flex items-center justify-center pt-2 pb-1"
-          onClick={() => navigate(-1)}
+          onClick={() => saveAndNavigate(-1)}
           aria-label="Close"
         >
           <div className="h-1 w-10 rounded-full" style={{ background: 'var(--c-line)' }} />
@@ -131,7 +132,7 @@ export default function CatchEdit() {
           </div>
         </div>
 
-        <button className="btn-primary" onClick={() => navigate(-1)}>
+        <button className="btn-primary" onClick={() => saveAndNavigate(-1)}>
           Done
         </button>
 
