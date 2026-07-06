@@ -60,6 +60,7 @@ export default function Home() {
   const [savedId, setSavedId] = useState<string | null>(null);
   const [ripples, setRipples] = useState<{ id: number; x: number; y: number }[]>([]);
   const [showSyncPrompt, setShowSyncPrompt] = useState(false);
+  const [bgLoaded, setBgLoaded] = useState(false);
   const rippleId = useRef(0);
   const bgRef = useRef<HTMLImageElement>(null);
   useParallax(bgRef);
@@ -119,15 +120,17 @@ export default function Home() {
         ref={bgRef}
         src={bgUrl}
         alt=""
-        className="absolute inset-0 h-full w-full object-cover"
+        className="absolute inset-0 h-full w-full object-cover transition-opacity duration-300"
         style={{
           transform: 'scale(1.18) perspective(800px)',
           willChange: 'transform',
           pointerEvents: 'none',
+          opacity: bgLoaded ? 1 : 0,
         }}
         loading="eager"
         decoding="async"
         fetchPriority="high"
+        onLoad={() => setBgLoaded(true)}
       />
       <div
         className="absolute inset-0"
@@ -140,7 +143,7 @@ export default function Home() {
       />
 
       {/* Content */}
-      <div className="relative z-10 flex h-full flex-col overflow-hidden px-6 pt-[calc(1.5rem+env(safe-area-inset-top))]" style={{ overscrollBehavior: 'none' }}>
+      <div className={`relative z-10 flex h-full flex-col overflow-hidden px-6 pt-[calc(1.5rem+env(safe-area-inset-top))] transition-opacity duration-300 ${bgLoaded ? 'opacity-100' : 'opacity-0'}`} style={{ overscrollBehavior: 'none' }}>
         <header className="flex items-center justify-between">
           <h1 className="text-lg font-extrabold tracking-tight text-white">
             Caught

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { Settings } from '../types';
+import { supabase } from '../lib/supabase';
+import { pushSettings } from '../lib/sync';
 
 const KEY = 'caught-settings';
 const EVENT = 'caught-settings-changed';
@@ -34,6 +36,14 @@ export function useSettings(): [Settings, (patch: Partial<Settings>) => void] {
     const next = { ...loadSettings(), ...patch };
     localStorage.setItem(KEY, JSON.stringify(next));
     window.dispatchEvent(new Event(EVENT));
+    // Push to Supabase if logged in
+    if (supabase) {
+      supabase.auth.getSession().then(({ data }) => {
+        if (data.session?.user) {
+          pushSettings(data.session.user.id, next).catch(console.error);
+        }
+      });
+    }
   }, []);
 
   return [settings, update];
