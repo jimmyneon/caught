@@ -4,6 +4,7 @@ import { ChevronDown, Check } from 'lucide-react';
 import { db } from '../db';
 import { useSettings } from '../hooks/useSettings';
 import { searchSpecies, FISH_SPECIES } from '../lib/fishSpecies';
+import { getSpeciesImage } from '../lib/images';
 
 interface Props {
   value: string;
@@ -108,25 +109,31 @@ export default function SpeciesInput({ value, onChange }: Props) {
             boxShadow: 'var(--shadow-float)',
           }}
         >
-          {suggestions.map((s) => (
-            <button
-              key={s}
-              type="button"
-              className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium transition-colors active:bg-surface-3"
-              style={{
-                background: value === s ? 'var(--c-accent-bg)' : 'transparent',
-                color: value === s ? 'var(--c-accent)' : 'var(--c-ink)',
-              }}
-              onClick={() => {
-                onChange(s);
-                setQuery(s);
-                setOpen(false);
-              }}
-            >
-              <span>{s}</span>
-              {value === s && <Check size={16} />}
-            </button>
-          ))}
+          {suggestions.map((s) => {
+            const img = getSpeciesImage(s);
+            return (
+              <button
+                key={s}
+                type="button"
+                className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium transition-colors active:bg-surface-3"
+                style={{
+                  background: value === s ? 'var(--c-accent-bg)' : 'transparent',
+                  color: value === s ? 'var(--c-accent)' : 'var(--c-ink)',
+                }}
+                onClick={() => {
+                  onChange(s);
+                  setQuery(s);
+                  setOpen(false);
+                }}
+              >
+                <span className="flex items-center gap-2.5">
+                  {img && <img src={img} alt={s} className="h-8 w-8 rounded-lg object-cover" />}
+                  <span>{s}</span>
+                </span>
+                {value === s && <Check size={16} />}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>

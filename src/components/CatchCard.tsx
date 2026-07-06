@@ -7,6 +7,7 @@ import { fmtDate } from '../lib/format';
 import { db } from '../db';
 import BottomSheet from './BottomSheet';
 import ConditionsSummary, { type CondItem } from './ConditionsSummary';
+import { getSpeciesImage, getWaterImage } from '../lib/images';
 
 export default function CatchCard({ record, settings }: { record: CatchRecord; settings: Settings }) {
   const [showDetail, setShowDetail] = useState(false);
@@ -105,12 +106,20 @@ export default function CatchCard({ record, settings }: { record: CatchRecord; s
               </button>
             </div>
           ) : (
-            <button
-              className="text-left text-lg font-extrabold text-ink"
-              onClick={() => { setSpeciesDraft(record.species ?? ''); setEditingSpecies(true); }}
-            >
-              {record.species || 'Unknown fish'}
-            </button>
+            <div className="flex items-center gap-3">
+              {(() => {
+                const img = getSpeciesImage(record.species ?? '');
+                return img ? (
+                  <img src={img} alt={record.species ?? ''} className="h-14 w-14 shrink-0 rounded-xl object-cover" />
+                ) : null;
+              })()}
+              <button
+                className="text-left text-lg font-extrabold text-ink"
+                onClick={() => { setSpeciesDraft(record.species ?? ''); setEditingSpecies(true); }}
+              >
+                {record.species || 'Unknown fish'}
+              </button>
+            </div>
           )}
 
           {/* Weight + water type */}
@@ -121,7 +130,13 @@ export default function CatchCard({ record, settings }: { record: CatchRecord; s
               </span>
             )}
             {record.waterType && (
-              <span className="capitalize text-ink-3">{record.waterType}</span>
+              <span className="flex items-center gap-1.5 capitalize text-ink-3">
+                {(() => {
+                  const img = getWaterImage(record.waterType);
+                  return img ? <img src={img} alt={record.waterType} className="h-5 w-7 rounded object-cover" /> : null;
+                })()}
+                {record.waterType}
+              </span>
             )}
           </div>
 
