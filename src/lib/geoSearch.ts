@@ -22,21 +22,21 @@ export async function searchLocations(
 ): Promise<GeoLocation[]> {
   if (query.trim().length < 2) return [];
 
-  // Use Nominatim (OpenStreetMap) — supports countrycodes + proximity bias
+  // Default to UK + Ireland filtering — only broaden if user is clearly outside UK
+  let countrycodes = 'gb,ie';
+  if (userLat != null && userLon != null) {
+    const inUK = userLat > 49 && userLat < 61 && userLon > -9 && userLon < 2;
+    if (!inUK) countrycodes = '';
+  }
+
+  // Use Nominatim (OpenStreetMap) — supports countrycodes + address detail
   const params = new URLSearchParams({
     q: query,
     format: 'json',
     limit: '10',
     addressdetails: '1',
   });
-
-  // If user is in the UK, bias toward UK results
-  if (userLat != null && userLon != null) {
-    // Check if user is roughly in the UK
-    if (userLat > 49 && userLat < 61 && userLon > -9 && userLon < 2) {
-      params.set('countrycodes', 'gb,ie');
-    }
-  }
+  if (countrycodes) params.set('countrycodes', countrycodes);
 
   try {
     const res = await fetch(`https://nominatim.openstreetmap.org/search?${params}`, {
@@ -46,14 +46,21 @@ export async function searchLocations(
     const data = await res.json();
     if (!Array.isArray(data)) return [];
 
-    let results: GeoLocation[] = data.map((r: any) => ({
-      lat: parseFloat(r.lat),
-      lon: parseFloat(r.lon),
-      name: r.display_name?.split(',')[0] ?? r.name ?? 'Unknown',
-      country: [r.address?.city, r.address?.county, r.address?.state, r.address?.country]
-        .filter(Boolean).join(', '),
-      countryCode: r.address?.country_code?.toUpperCase(),
-    }));
+    let results: GeoLocation[] = data.map((r: any) => {
+      const a = r.address ?? {};
+      // Build a descriptive subtitle: county, state_district, country
+      const parts = [
+        a.county ?? a.state_district ?? a.city_district ?? a.state,
+        a.country,
+      ].filter(Boolean);
+      return {
+        lat: parseFloat(r.lat),
+        lon: parseFloat(r.lon),
+        name: a.city ?? a.town ?? a.village ?? a.hamlet ?? r.display_name?.split(',')[0] ?? 'Unknown',
+        country: parts.join(', '),
+        countryCode: a.country_code?.toUpperCase(),
+      };
+    });
 
     // Sort by distance from user if we have their location
     if (userLat != null && userLon != null) {
@@ -66,7 +73,7 @@ export async function searchLocations(
     return results;
   } catch {
     // Fallback to Open-Meteo if Nominatim fails
-    return searchLocationsFallback(query, userLat, userLon);
+    return searchLocationsFallback(query, userLat, userLon, countrycodes);
   }
 }
 
@@ -74,8 +81,9 @@ async function searchLocationsFallback(
   query: string,
   userLat?: number,
   userLon?: number,
+  countrycodes?: string,
 ): Promise<GeoLocation[]> {
-  const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=10&language=en&format=json`;
+  const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=20&language=en&format=json`;
   const res = await fetch(url);
   if (!res.ok) return [];
   const data = await res.json();
@@ -88,6 +96,12 @@ async function searchLocationsFallback(
     country: [r.admin1, r.country].filter(Boolean).join(', '),
     countryCode: r.country_code?.toUpperCase(),
   }));
+
+  // Filter to UK/Ireland if requested
+  if (countrycodes) {
+    const codes = countrycodes.split(',').map((c) => c.toUpperCase());
+    results = results.filter((r) => r.countryCode && codes.includes(r.countryCode));
+  }
 
   if (userLat != null && userLon != null) {
     results = results.map((r) => ({

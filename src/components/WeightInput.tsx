@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Minus, Plus, X, ChevronDown } from 'lucide-react';
+import { X, ChevronDown, Check } from 'lucide-react';
 import { kgToLbOz, lbOzToKg, formatWeight } from '../lib/units';
 import BottomSheet from './BottomSheet';
+import SpinWheel from './SpinWheel';
 
 interface Props {
   valueKg: number | undefined;
@@ -9,97 +10,61 @@ interface Props {
   onChange: (kg: number | undefined) => void;
 }
 
-function BigBtn({ icon: Icon, onClick, disabled }: { icon: typeof Plus; onClick: () => void; disabled?: boolean }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className="flex items-center justify-center rounded-2xl transition-all active:scale-90 disabled:opacity-30"
-      style={{ background: 'var(--c-accent-bg)', color: 'var(--c-accent)', width: '3.75rem', height: '3.75rem' }}
-    >
-      <Icon size={28} strokeWidth={2.5} />
-    </button>
-  );
-}
-
-function BigValue({ value, unit }: { value: string; unit: string }) {
-  return (
-    <div className="flex flex-1 flex-col items-center justify-center rounded-2xl" style={{ background: 'var(--c-surface-3)', height: '3.75rem' }}>
-      <span className="text-xl font-extrabold leading-none text-ink tabular-nums">{value}</span>
-      <span className="mt-0.5 text-[10px] font-bold text-ink-3">{unit}</span>
-    </div>
-  );
-}
-
 export default function WeightInput({ valueKg, units, onChange }: Props) {
   const [open, setOpen] = useState(false);
+
+  // Imperial state
   const initial = valueKg != null ? kgToLbOz(valueKg) : { lb: 0, oz: 0 };
   const [lb, setLb] = useState<number>(initial.lb);
   const [oz, setOz] = useState<number>(initial.oz);
+
+  // Metric state
+  const kg = valueKg ?? 0;
+  const grams = Math.round((kg - Math.floor(kg)) * 1000);
+  const wholeKg = Math.floor(kg);
+  const [kgState, setKgState] = useState(wholeKg);
+  const [gState, setGState] = useState(grams);
+
   const hasValue = valueKg != null;
 
-  // Sync local state when sheet opens
   const openSheet = () => {
-    const init = valueKg != null ? kgToLbOz(valueKg) : { lb: 0, oz: 0 };
-    setLb(init.lb);
-    setOz(init.oz);
+    if (units === 'imperial') {
+      const init = valueKg != null ? kgToLbOz(valueKg) : { lb: 0, oz: 0 };
+      setLb(init.lb);
+      setOz(init.oz);
+    } else {
+      const k = valueKg ?? 0;
+      setKgState(Math.floor(k));
+      setGState(Math.round((k - Math.floor(k)) * 1000));
+    }
     setOpen(true);
   };
 
-  const emit = (newLb: number, newOz: number) => {
+  const emitImperial = (newLb: number, newOz: number) => {
     if (newLb === 0 && newOz === 0) onChange(undefined);
     else onChange(lbOzToKg(newLb, newOz));
   };
 
-  const adjustLb = (delta: number) => {
-    const next = Math.max(0, lb + delta);
-    setLb(next);
-    emit(next, oz);
-  };
-
-  const adjustOz = (delta: number) => {
-    let nextOz = oz + delta;
-    let nextLb = lb;
-    if (nextOz >= 16) { nextLb += 1; nextOz -= 16; }
-    else if (nextOz < 0) {
-      if (nextLb > 0) { nextLb -= 1; nextOz += 16; }
-      else { nextOz = 0; }
-    }
-    setLb(nextLb);
-    setOz(nextOz);
-    emit(nextLb, nextOz);
+  const emitMetric = (newKg: number, newG: number) => {
+    if (newKg === 0 && newG === 0) onChange(undefined);
+    else onChange(newKg + newG / 1000);
   };
 
   const clear = () => {
     setLb(0);
     setOz(0);
+    setKgState(0);
+    setGState(0);
     onChange(undefined);
   };
 
-  // Metric helpers
-  const kg = valueKg ?? 0;
-  const grams = Math.round((kg - Math.floor(kg)) * 1000);
-  const wholeKg = Math.floor(kg);
-
-  const adjustKg = (delta: number) => {
-    const next = Math.max(0, Math.round((kg + delta) * 100) / 100);
-    onChange(next === 0 ? undefined : next);
-  };
-
-  const adjustGrams = (delta: number) => {
-    let nextG = grams + delta;
-    let nextKg = wholeKg;
-    if (nextG >= 1000) { nextKg += 1; nextG -= 1000; }
-    else if (nextG < 0) {
-      if (nextKg > 0) { nextKg -= 1; nextG += 1000; }
-      else { nextG = 0; }
-    }
-    const next = nextKg + nextG / 1000;
-    onChange(next === 0 ? undefined : Math.round(next * 1000) / 1000);
-  };
-
   const displayValue = hasValue ? formatWeight(valueKg!, units) : 'Not set';
+
+  // Value ranges for wheels
+  const lbValues = Array.from({ length: 200 }, (_, i) => i);
+  const ozValues = Array.from({ length: 16 }, (_, i) => i);
+  const kgValues = Array.from({ length: 100 }, (_, i) => i);
+  const gValues = [0, 50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 550, 600, 650, 700, 750, 800, 850, 900, 950];
 
   return (
     <div>
@@ -115,50 +80,58 @@ export default function WeightInput({ valueKg, units, onChange }: Props) {
 
       <BottomSheet open={open} onClose={() => setOpen(false)} title="Weight">
         <div className="flex flex-col gap-5">
-          {/* Clear button */}
-          {hasValue && (
+          {/* Clear — always visible */}
+          <div className="flex justify-end">
             <button
               type="button"
-              className="flex items-center gap-1 self-end text-xs font-bold text-ink-3"
+              className="flex items-center gap-1 text-xs font-bold text-ink-3"
               onClick={clear}
             >
               <X size={14} /> Clear
             </button>
-          )}
+          </div>
 
-          {units === 'metric' ? (
-            <div className="rounded-2xl p-4" style={{ background: 'var(--c-surface-2)' }}>
-              <div className="flex items-stretch gap-3">
-                <div className="flex flex-1 flex-col items-center gap-2.5">
-                  <BigBtn icon={Plus} onClick={() => adjustKg(1)} />
-                  <BigValue value={String(wholeKg)} unit="kg" />
-                  <BigBtn icon={Minus} onClick={() => adjustKg(-1)} disabled={wholeKg === 0} />
-                </div>
-                <div className="flex flex-1 flex-col items-center gap-2.5">
-                  <BigBtn icon={Plus} onClick={() => adjustGrams(50)} />
-                  <BigValue value={String(grams)} unit="g" />
-                  <BigBtn icon={Minus} onClick={() => adjustGrams(-50)} disabled={wholeKg === 0 && grams === 0} />
-                </div>
-              </div>
+          {/* Spin wheels */}
+          <div className="rounded-2xl p-4" style={{ background: 'var(--c-surface-2)' }}>
+            <div className="flex items-stretch gap-3">
+              {units === 'metric' ? (
+                <>
+                  <SpinWheel
+                    values={kgValues}
+                    value={kgState}
+                    unit="kg"
+                    onChange={(v) => { setKgState(v); emitMetric(v, gState); }}
+                  />
+                  <SpinWheel
+                    values={gValues}
+                    value={gState}
+                    unit="g"
+                    onChange={(v) => { setGState(v); emitMetric(kgState, v); }}
+                  />
+                </>
+              ) : (
+                <>
+                  <SpinWheel
+                    values={lbValues}
+                    value={lb}
+                    unit="lb"
+                    onChange={(v) => { setLb(v); emitImperial(v, oz); }}
+                  />
+                  <SpinWheel
+                    values={ozValues}
+                    value={oz}
+                    unit="oz"
+                    onChange={(v) => { setOz(v); emitImperial(lb, v); }}
+                  />
+                </>
+              )}
             </div>
-          ) : (
-            <div className="rounded-2xl p-4" style={{ background: 'var(--c-surface-2)' }}>
-              <div className="flex items-stretch gap-3">
-                <div className="flex flex-1 flex-col items-center gap-2.5">
-                  <BigBtn icon={Plus} onClick={() => adjustLb(1)} />
-                  <BigValue value={String(lb)} unit="lb" />
-                  <BigBtn icon={Minus} onClick={() => adjustLb(-1)} disabled={lb === 0} />
-                </div>
-                <div className="flex flex-1 flex-col items-center gap-2.5">
-                  <BigBtn icon={Plus} onClick={() => adjustOz(1)} />
-                  <BigValue value={String(oz)} unit="oz" />
-                  <BigBtn icon={Minus} onClick={() => adjustOz(-1)} disabled={lb === 0 && oz === 0} />
-                </div>
-              </div>
-            </div>
-          )}
+          </div>
 
-          <button className="btn-primary" onClick={() => setOpen(false)}>Done</button>
+          {/* Done at bottom */}
+          <button className="btn-primary flex items-center justify-center gap-2" onClick={() => setOpen(false)}>
+            <Check size={18} /> Done
+          </button>
         </div>
       </BottomSheet>
     </div>

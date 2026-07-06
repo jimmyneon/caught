@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Loader2, Check, MapPin, Search, Navigation, Clock, Calendar, Cloud, Wind, Gauge, Waves, Droplets, Thermometer, Info } from 'lucide-react';
+import { Loader2, Check, MapPin, Search, Navigation, Clock, Calendar, Cloud, Wind, Gauge, Waves, Droplets, Thermometer, Info, ChevronDown } from 'lucide-react';
 import { useSettings } from '../hooks/useSettings';
 import { fetchMultiDayForecast } from '../lib/forecastFetch';
 import { scoreDay, FISHING_TYPES, PERIOD_OPTIONS, getCriteria } from '../lib/fishingForecast';
@@ -8,6 +8,7 @@ import { weatherIcon } from '../lib/weatherIcons';
 import { fmtDate } from '../lib/format';
 import { searchLocations, type GeoLocation } from '../lib/geoSearch';
 import BottomSheet from '../components/BottomSheet';
+import MapPreview from '../components/MapPreview';
 
 function ratingColor(rating: DayScore['rating']): string {
   switch (rating) {
@@ -70,6 +71,7 @@ export default function PlanPage() {
   const [searching, setSearching] = useState(false);
   const [showLocationMenu, setShowLocationMenu] = useState(false);
   const [calendarConfirm, setCalendarConfirm] = useState<DayScore | null>(null);
+  const [previewLoc, setPreviewLoc] = useState<GeoLocation | null>(null);
 
   const longPressTimer = useRef<number | null>(null);
 
@@ -211,7 +213,7 @@ export default function PlanPage() {
       </div>
 
       {/* Location slide-up */}
-      <BottomSheet open={showLocationMenu} onClose={() => setShowLocationMenu(false)}>
+      <BottomSheet open={showLocationMenu} onClose={() => { setShowLocationMenu(false); setPreviewLoc(null); }}>
         <div className="flex flex-col gap-3">
           <h2 className="text-xl font-extrabold text-ink">Location</h2>
 
@@ -232,23 +234,24 @@ export default function PlanPage() {
 
           <div className="relative">
             <input
-              className="field pl-11"
+              className="field"
+              style={{ paddingLeft: '2.75rem', paddingRight: '2.25rem' }}
               placeholder="Search a town or city…"
               value={searchQuery}
               onChange={(e) => { setSearchQuery(e.target.value); setLocationMode('search'); }}
             />
-            <Search size={18} style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--c-ink-3)' }} />
+            <Search size={18} style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--c-ink-3)', pointerEvents: 'none' }} />
             {searching && <Loader2 size={16} className="animate-spin absolute right-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--c-ink-3)' }} />}
           </div>
 
-          {searchResults.length > 0 && (
+          {searchResults.length > 0 && !previewLoc && (
             <div className="flex flex-col gap-1.5">
               {searchResults.map((r) => (
                 <button
                   key={`${r.lat}-${r.lon}`}
                   className="flex w-full items-center gap-2 rounded-xl p-3 text-left text-sm transition-colors active:bg-surface-3"
                   style={{ background: 'var(--c-surface-3)' }}
-                  onClick={() => { setLocation(r); setLocationMode('search'); setSearchQuery(''); setSearchResults([]); setShowLocationMenu(false); }}
+                  onClick={() => setPreviewLoc(r)}
                 >
                   <MapPin size={16} style={{ color: 'var(--c-ink-3)' }} />
                   <div className="flex flex-1 flex-col">
@@ -262,6 +265,35 @@ export default function PlanPage() {
                   )}
                 </button>
               ))}
+            </div>
+          )}
+
+          {previewLoc && (
+            <div className="flex flex-col gap-3">
+              <button
+                className="flex items-center gap-2 text-sm font-bold text-ink-3"
+                onClick={() => setPreviewLoc(null)}
+              >
+                <ChevronDown size={16} /> Back to results
+              </button>
+              <div className="flex flex-col">
+                <span className="font-bold text-ink">{previewLoc.name}</span>
+                {previewLoc.country && <span className="text-xs text-ink-3">{previewLoc.country}</span>}
+              </div>
+              <MapPreview lat={previewLoc.lat} lon={previewLoc.lon} />
+              <button
+                className="btn-primary flex items-center justify-center gap-2"
+                onClick={() => {
+                  setLocation(previewLoc);
+                  setLocationMode('search');
+                  setSearchQuery('');
+                  setSearchResults([]);
+                  setPreviewLoc(null);
+                  setShowLocationMenu(false);
+                }}
+              >
+                <Check size={18} /> Use this location
+              </button>
             </div>
           )}
         </div>
