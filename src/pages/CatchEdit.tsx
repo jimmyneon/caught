@@ -11,11 +11,10 @@ import SelectDropdown from '../components/SelectDropdown';
 import ConditionsGrid from '../components/ConditionsGrid';
 import LocationPicker from '../components/LocationPicker';
 
-import { BAIT_METHODS } from '../lib/baitMethods';
+import { BAIT_METHODS, getMethodImage } from '../lib/baitMethods';
+import { getWaterImage } from '../lib/images';
 
 const WATER_TYPES: WaterType[] = ['sea', 'river', 'lake', 'canal', 'reservoir', 'pond', 'stream', 'estuary', 'stillwater', 'loch'];
-
-const METHODS = BAIT_METHODS.map((m) => m.name);
 
 export default function CatchEdit() {
   const { id } = useParams();
@@ -41,7 +40,8 @@ export default function CatchEdit() {
         setRec(null);
       }
     });
-  }, [id, settings.defaultWaterType]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   // Auto-save: debounced write to db whenever rec changes
   useEffect(() => {
@@ -138,7 +138,7 @@ export default function CatchEdit() {
             <SelectDropdown
               label="Method / bait"
               placeholder="Select method"
-              options={METHODS.map((m) => ({ value: m, label: m }))}
+              options={BAIT_METHODS.map((m) => ({ value: m.name, label: m.name, image: getMethodImage(m.name) ?? undefined }))}
               value={rec.method}
               onChange={(method) => patch({ method })}
               allowCustom
@@ -149,7 +149,7 @@ export default function CatchEdit() {
             <SelectDropdown
               label="Water type"
               placeholder="Select water type"
-              options={WATER_TYPES.map((w) => ({ value: w, label: w }))}
+              options={WATER_TYPES.map((w) => ({ value: w, label: w, image: getWaterImage(w) ?? undefined }))}
               value={rec.waterType}
               onChange={(w) => patch({ waterType: w as WaterType | undefined })}
               capitalize

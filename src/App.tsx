@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { Download } from 'lucide-react';
+import { Download, X } from 'lucide-react';
 import Home from './pages/Home';
 import LogPage from './pages/LogPage';
 import MapPage from './pages/MapPage';
@@ -77,8 +77,8 @@ export default function App() {
       </main>
       {/* Install prompt */}
       {installPrompt && (
-        <div className="pointer-events-auto absolute bottom-28 left-4 right-4 z-[1001] flex items-center gap-3 rounded-2xl p-3.5 animate-slide-up"
-          style={{ background: 'var(--c-surface)', boxShadow: 'var(--shadow-float)', border: '1px solid var(--c-line)' }}>
+        <div className="pointer-events-auto absolute left-4 right-4 z-1001 flex items-center gap-3 rounded-2xl p-3.5 animate-slide-up"
+          style={{ background: 'var(--c-surface)', boxShadow: 'var(--shadow-float)', border: '1px solid var(--c-line)', top: 'calc(env(safe-area-inset-top) + 1rem)' }}>
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ background: 'var(--c-accent-bg)' }}>
             <Download size={20} style={{ color: 'var(--c-accent)' }} />
           </div>
@@ -86,7 +86,14 @@ export default function App() {
             <div className="text-sm font-bold text-ink">Install Caught</div>
             <div className="text-xs text-ink-3">Add to home screen for quick access</div>
           </div>
-          <button className="btn-primary !px-4 !py-2 text-sm" onClick={handleInstall}>Install</button>
+          <button className="btn-primary px-4 py-2 text-sm" onClick={handleInstall}>Install</button>
+          <button
+            className="shrink-0 rounded-full p-1.5 text-ink-3 active:bg-surface-3"
+            onClick={() => setInstallPrompt(null)}
+            aria-label="Dismiss"
+          >
+            <X size={18} />
+          </button>
         </div>
       )}
       <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-[1000]">

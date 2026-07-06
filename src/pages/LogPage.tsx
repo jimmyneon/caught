@@ -11,6 +11,7 @@ import { EmptyState } from '../components/EmptyState';
 import { exportCSV, exportPDF } from '../lib/export';
 import { formatWeight } from '../lib/units';
 import { fmtDate } from '../lib/format';
+import { getSpeciesImage, getWaterImage, getMethodImage } from '../lib/images';
 
 export default function LogPage() {
   const [settings] = useSettings();
@@ -125,8 +126,11 @@ function CatchGridCard({ record, settings }: { record: CatchRecord; settings: Se
         onTouchMove={cancelLongPress}
         onContextMenu={(e) => { e.preventDefault(); setShowQuickMenu(true); }}
       >
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: 'var(--c-accent-bg)' }}>
-          <Fish size={20} strokeWidth={1.8} style={{ color: 'var(--c-accent)' }} />
+        <div className="h-10 w-10 overflow-hidden rounded-xl" style={{ background: 'var(--c-accent-bg)' }}>
+          {(() => {
+            const img = getSpeciesImage(record.species ?? '');
+            return img ? <img src={img} alt={record.species ?? ''} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center"><Fish size={20} strokeWidth={1.8} style={{ color: 'var(--c-accent)' }} /></div>;
+          })()}
         </div>
         <div className="truncate text-sm font-bold text-ink">
           {record.species || 'Unknown fish'}
@@ -143,21 +147,43 @@ function CatchGridCard({ record, settings }: { record: CatchRecord; settings: Se
 
       <BottomSheet open={showDetail} onClose={() => setShowDetail(false)}>
         <div className="flex flex-col gap-5">
-          <button
-            className="text-left text-xl font-extrabold text-ink"
-            onClick={() => { setShowDetail(false); navigate(`/catch/${record.id}`); }}
-          >
-            {record.species || 'Unknown fish'}
-          </button>
+          <div className="flex items-center gap-3">
+            {(() => {
+              const img = getSpeciesImage(record.species ?? '');
+              return img ? <img src={img} alt={record.species ?? ''} className="h-14 w-14 shrink-0 rounded-xl object-cover" /> : null;
+            })()}
+            <button
+              className="text-left text-xl font-extrabold text-ink"
+              onClick={() => { setShowDetail(false); navigate(`/catch/${record.id}`); }}
+            >
+              {record.species || 'Unknown fish'}
+            </button>
+          </div>
           <div className="flex items-center gap-3 text-sm">
             {record.weightKg != null && (
               <span className="font-bold" style={{ color: 'var(--c-accent)' }}>
                 {formatWeight(record.weightKg, settings.units)}
               </span>
             )}
-            {record.waterType && <span className="capitalize text-ink-3">{record.waterType}</span>}
+            {record.waterType && (
+              <span className="flex items-center gap-1.5 capitalize text-ink-3">
+                {(() => {
+                  const img = getWaterImage(record.waterType);
+                  return img ? <img src={img} alt={record.waterType} className="h-5 w-7 rounded object-cover" /> : null;
+                })()}
+                {record.waterType}
+              </span>
+            )}
           </div>
-          {record.method && <div className="text-sm text-ink-2">{record.method}</div>}
+          {record.method && (
+            <div className="flex items-center gap-2 text-sm text-ink-2">
+              {(() => {
+                const img = getMethodImage(record.method);
+                return img ? <img src={img} alt={record.method} className="h-6 w-6 rounded object-cover" /> : null;
+              })()}
+              {record.method}
+            </div>
+          )}
           {record.notes && (
             <div className="rounded-xl p-3 text-sm text-ink-2" style={{ background: 'var(--c-surface-3)' }}>
               {record.notes}

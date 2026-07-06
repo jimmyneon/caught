@@ -5,6 +5,7 @@ import BottomSheet from './BottomSheet';
 interface Option {
   value: string;
   label: string;
+  image?: string;
 }
 
 interface Props {
@@ -69,7 +70,10 @@ export default function SelectDropdown({
                 setOpen(false);
               }}
             >
-              <span className={capitalize ? 'capitalize' : ''}>{opt.label}</span>
+              <span className="flex items-center gap-2.5">
+                {opt.image && <img src={opt.image} alt={opt.label} className="h-8 w-8 rounded-lg object-cover" />}
+                <span className={capitalize ? 'capitalize' : ''}>{opt.label}</span>
+              </span>
               {value === opt.value && <Check size={18} />}
             </button>
           ))}

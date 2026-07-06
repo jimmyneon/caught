@@ -15,17 +15,17 @@ function SquareBtn({ icon: Icon, onClick, disabled }: { icon: typeof Plus; onCli
       onClick={onClick}
       disabled={disabled}
       className="flex items-center justify-center rounded-2xl transition-all active:scale-90 disabled:opacity-30"
-      style={{ background: 'var(--c-accent-bg)', color: 'var(--c-accent)', width: '3.25rem', height: '3.25rem' }}
+      style={{ background: 'var(--c-accent-bg)', color: 'var(--c-accent)', width: '3rem', height: '3rem' }}
     >
-      <Icon size={26} strokeWidth={2.5} />
+      <Icon size={24} strokeWidth={2.5} />
     </button>
   );
 }
 
 function ValueBox({ value, unit }: { value: string; unit: string }) {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center rounded-2xl" style={{ background: 'var(--c-surface-3)', height: '3.25rem' }}>
-      <span className="text-lg font-extrabold leading-none text-ink tabular-nums">{value}</span>
+    <div className="flex flex-1 flex-col items-center justify-center rounded-2xl" style={{ background: 'var(--c-surface-3)', height: '3rem' }}>
+      <span className="text-base font-extrabold leading-none text-ink tabular-nums">{value}</span>
       <span className="mt-0.5 text-[10px] font-bold text-ink-3">{unit}</span>
     </div>
   );
@@ -101,17 +101,17 @@ export default function WeightInput({ valueKg, units, onChange }: Props) {
         </div>
 
         <div className="rounded-2xl p-3" style={{ background: 'var(--c-surface-2)' }}>
-          {/* Kilograms row */}
-          <div className="flex items-center gap-2.5">
-            <SquareBtn icon={Minus} onClick={() => adjustKg(-1)} disabled={wholeKg === 0} />
-            <ValueBox value={String(wholeKg)} unit="kg" />
-            <SquareBtn icon={Plus} onClick={() => adjustKg(1)} />
-          </div>
-          {/* Grams row */}
-          <div className="mt-2.5 flex items-center gap-2.5">
-            <SquareBtn icon={Minus} onClick={() => adjustGrams(-50)} disabled={wholeKg === 0 && grams === 0} />
-            <ValueBox value={String(grams)} unit="g" />
-            <SquareBtn icon={Plus} onClick={() => adjustGrams(50)} />
+          <div className="flex items-stretch gap-2">
+            <div className="flex flex-1 flex-col items-center gap-2">
+              <SquareBtn icon={Plus} onClick={() => adjustKg(1)} />
+              <ValueBox value={String(wholeKg)} unit="kg" />
+              <SquareBtn icon={Minus} onClick={() => adjustKg(-1)} disabled={wholeKg === 0} />
+            </div>
+            <div className="flex flex-1 flex-col items-center gap-2">
+              <SquareBtn icon={Plus} onClick={() => adjustGrams(50)} />
+              <ValueBox value={String(grams)} unit="g" />
+              <SquareBtn icon={Minus} onClick={() => adjustGrams(-50)} disabled={wholeKg === 0 && grams === 0} />
+            </div>
           </div>
         </div>
       </div>
@@ -130,17 +130,17 @@ export default function WeightInput({ valueKg, units, onChange }: Props) {
       </div>
 
       <div className="rounded-2xl p-3" style={{ background: 'var(--c-surface-2)' }}>
-        {/* Pounds row */}
-        <div className="flex items-center gap-2.5">
-          <SquareBtn icon={Minus} onClick={() => adjustLb(-1)} disabled={lb === 0} />
-          <ValueBox value={String(lb)} unit="lb" />
-          <SquareBtn icon={Plus} onClick={() => adjustLb(1)} />
-        </div>
-        {/* Ounces row */}
-        <div className="mt-2.5 flex items-center gap-2.5">
-          <SquareBtn icon={Minus} onClick={() => adjustOz(-1)} disabled={lb === 0 && oz === 0} />
-          <ValueBox value={String(oz)} unit="oz" />
-          <SquareBtn icon={Plus} onClick={() => adjustOz(1)} />
+        <div className="flex items-stretch gap-2">
+          <div className="flex flex-1 flex-col items-center gap-2">
+            <SquareBtn icon={Plus} onClick={() => adjustLb(1)} />
+            <ValueBox value={String(lb)} unit="lb" />
+            <SquareBtn icon={Minus} onClick={() => adjustLb(-1)} disabled={lb === 0} />
+          </div>
+          <div className="flex flex-1 flex-col items-center gap-2">
+            <SquareBtn icon={Plus} onClick={() => adjustOz(1)} />
+            <ValueBox value={String(oz)} unit="oz" />
+            <SquareBtn icon={Minus} onClick={() => adjustOz(-1)} disabled={lb === 0 && oz === 0} />
+          </div>
         </div>
       </div>
     </div>

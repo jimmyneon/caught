@@ -76,10 +76,12 @@ export default function Home() {
     }
   }, [user, authLoading, isSupabaseConfigured]);
 
-  const incomplete = useLiveQuery(
-    () => db.catches.filter((c) => !c.complete).count(),
+  const incompleteCatches = useLiveQuery(
+    () => db.catches.filter((c) => !c.complete).toArray(),
     [],
-  ) ?? 0;
+  ) ?? [];
+
+  const incomplete = incompleteCatches.length;
 
   const todayStart = new Date().setHours(0, 0, 0, 0);
   const todayCount = useLiveQuery(
@@ -111,7 +113,7 @@ export default function Home() {
   const bgUrl = BG_IMAGES[settings.theme] ?? BG_IMAGES.dawn;
 
   return (
-    <div className="relative h-full w-full overflow-hidden bg-black">
+    <div className="relative h-full w-full overflow-hidden bg-black" style={{ position: 'fixed', inset: 0 }}>
       {/* Full-screen background photo with subtle parallax */}
       <img
         ref={bgRef}
@@ -121,6 +123,7 @@ export default function Home() {
         style={{
           transform: 'scale(1.18) perspective(800px)',
           willChange: 'transform',
+          pointerEvents: 'none',
         }}
         loading="eager"
         decoding="async"
@@ -137,7 +140,7 @@ export default function Home() {
       />
 
       {/* Content */}
-      <div className="relative z-10 flex h-full flex-col overflow-hidden px-6 pt-[calc(1.5rem+env(safe-area-inset-top))]">
+      <div className="relative z-10 flex h-full flex-col overflow-hidden px-6 pt-[calc(1.5rem+env(safe-area-inset-top))]" style={{ overscrollBehavior: 'none' }}>
         <header className="flex items-center justify-between">
           <h1 className="text-lg font-extrabold tracking-tight text-white">
             Caught
@@ -203,15 +206,18 @@ export default function Home() {
 
         {/* Bottom: incomplete prompt */}
         {incomplete > 0 && (
-          <Link
-            to="/log?filter=incomplete"
-            className="mb-28 flex items-center gap-3 rounded-2xl bg-white/8 p-3.5 backdrop-blur-md transition-transform active:scale-[0.98]"
+          <button
+            onClick={() => {
+              const first = incompleteCatches[0];
+              if (first) navigate(`/catch/${first.id}`);
+            }}
+            className="mb-28 flex w-full items-center gap-3 rounded-2xl bg-white/8 p-3.5 backdrop-blur-md transition-transform active:scale-[0.98]"
           >
-            <span className="flex-1 text-sm font-semibold text-white">
+            <span className="flex-1 text-left text-sm font-semibold text-white">
               {incomplete} incomplete catch{incomplete > 1 ? 'es' : ''} to finish
             </span>
             <span className="text-sm font-bold text-white/60">Finish →</span>
-          </Link>
+          </button>
         )}
       </div>
 
