@@ -14,7 +14,7 @@ import NavBar from './components/NavBar';
 import { retryPendingEnrichment } from './lib/enrich';
 import { useSettings } from './hooks/useSettings';
 import { useAuth } from './hooks/useAuth';
-import { fullSync } from './lib/sync';
+import { initialSync, quickSync } from './lib/sync';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -31,8 +31,17 @@ export default function App() {
   useEffect(() => {
     if (user && syncedUserId.current !== user.id) {
       syncedUserId.current = user.id;
-      fullSync(user.id);
+      initialSync(user.id);
     }
+  }, [user]);
+
+  // Quick sync when coming back online
+  useEffect(() => {
+    const onOnline = () => {
+      if (user) quickSync(user.id);
+    };
+    window.addEventListener('online', onOnline);
+    return () => window.removeEventListener('online', onOnline);
   }, [user]);
 
   // Set theme-color based on route + theme

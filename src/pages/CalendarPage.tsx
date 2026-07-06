@@ -19,7 +19,9 @@ export default function CalendarPage() {
   const catches = useLiveQuery(
     async () => {
       const all = await db.catches.toArray();
-      return all.sort((a, b) => b.createdAt - a.createdAt);
+      return all
+        .filter((c) => !c.deleted)
+        .sort((a, b) => b.createdAt - a.createdAt);
     },
     [],
   ) ?? [];

@@ -20,7 +20,13 @@ function count<T>(items: T[], key: (t: T) => string | undefined): Map<string, nu
 }
 
 export default function InsightsPage() {
-  const catches = useLiveQuery(() => db.catches.toArray(), []) ?? [];
+  const catches = useLiveQuery(
+    async () => {
+      const all = await db.catches.toArray();
+      return all.filter((c) => !c.deleted);
+    },
+    [],
+  ) ?? [];
   const [forecast, setForecast] = useState<ForecastHour[] | null>(null);
 
   const profiles = useMemo(() => {

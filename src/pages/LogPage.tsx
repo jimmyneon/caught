@@ -8,6 +8,7 @@ import type { CatchRecord, Settings } from '../types';
 import CatchCard from '../components/CatchCard';
 import BottomSheet from '../components/BottomSheet';
 import { EmptyState } from '../components/EmptyState';
+import { softDeleteCatch } from '../lib/sync';
 import { exportCSV, exportPDF } from '../lib/export';
 import { formatWeight } from '../lib/units';
 import { fmtDate } from '../lib/format';
@@ -31,7 +32,9 @@ export default function LogPage() {
     async () => {
       try {
         const all = await db.catches.toArray();
-        return all.sort((a, b) => b.createdAt - a.createdAt);
+        return all
+          .filter((c) => !c.deleted)
+          .sort((a, b) => b.createdAt - a.createdAt);
       } catch (err) {
         console.error('[LogPage] db query error:', err);
         return [];
@@ -218,7 +221,7 @@ function CatchGridCard({ record, settings }: { record: CatchRecord; settings: Se
           <button
             className="flex items-center gap-3 rounded-xl p-3.5 text-sm font-bold transition-colors active:bg-surface-3"
             style={{ background: 'var(--c-red-soft)', color: 'var(--c-red-accent)' }}
-            onClick={() => { setShowQuickMenu(false); db.catches.delete(record.id); }}
+            onClick={() => { setShowQuickMenu(false); softDeleteCatch(record.id); }}
           >
             <Trash2 size={18} /> Delete catch
           </button>

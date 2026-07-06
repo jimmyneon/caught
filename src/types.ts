@@ -35,6 +35,8 @@ export interface CatchRecord {
   kept?: boolean;
   complete: boolean;
   conditions?: Conditions;
+  syncedAt?: number;
+  deleted?: boolean;
 }
 
 export type Theme = 'dawn' | 'dusk';

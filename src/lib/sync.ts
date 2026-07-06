@@ -19,7 +19,7 @@ function toRow(c: CatchRecord, userId: string) {
     lat: c.lat ?? null,
     lon: c.lon ?? null,
     conditions: c.conditions ?? null,
-    deleted: false,
+    deleted: c.deleted ?? false,
   };
 }
 
@@ -38,52 +38,105 @@ function fromRow(row: any): CatchRecord {
     lat: row.lat ?? undefined,
     lon: row.lon ?? undefined,
     conditions: row.conditions ?? undefined,
+    syncedAt: row.updated_at ?? Date.now(),
+    deleted: row.deleted ?? false,
   };
 }
 
-export async function pushLocalCatches(userId: string) {
-  if (!supabase) return;
-  const local = await db.catches.toArray();
-  for (const c of local) {
-    await supabase.from('catches').upsert(toRow(c, userId));
-  }
-}
+// ============================================================
+// PUSH QUEUE: Push unsynced local catches to Supabase one-by-one
+// If any push fails, stop — remaining catches stay in queue for next attempt
+// ============================================================
 
-export async function pullRemoteCatches(userId: string) {
-  if (!supabase) return;
-  const { data, error } = await supabase
-    .from('catches')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('deleted', false)
-    .order('created_at', { ascending: false });
+let pushInProgress = false;
 
-  if (error || !data) {
-    console.error('pullRemoteCatches error:', error);
-    return;
-  }
+export async function syncPushQueue(userId: string): Promise<void> {
+  if (!supabase || pushInProgress) return;
+  pushInProgress = true;
+  try {
+    // Get all catches that need syncing (syncedAt === 0 or undefined)
+    const unsynced = await db.catches
+      .filter((c) => !c.syncedAt || c.syncedAt === 0)
+      .toArray();
 
-  for (const row of data) {
-    const existing = await db.catches.get(row.id);
-    if (!existing) {
-      // New remote catch not in local DB — insert it
-      await db.catches.put(fromRow(row));
+    if (unsynced.length === 0) return;
+
+    for (const c of unsynced) {
+      const { error } = await supabase.from('catches').upsert(toRow(c, userId));
+      if (error) {
+        console.error('[sync] Push failed for catch', c.id, error);
+        break; // Stop on first error — will retry next time
+      }
+      // Mark as synced with current timestamp
+      await db.catches.update(c.id, { syncedAt: Date.now() });
     }
-    // If catch exists locally, keep local version (it may have newer edits)
+
+    // Clean up: remove locally-deleted catches that have been synced
+    const syncedDeleted = await db.catches
+      .filter((c) => c.deleted === true && c.syncedAt != null && c.syncedAt > 0)
+      .toArray();
+    for (const c of syncedDeleted) {
+      await db.catches.delete(c.id);
+    }
+  } catch (e) {
+    console.error('[sync] Push queue error:', e);
+  } finally {
+    pushInProgress = false;
   }
 }
 
-export async function pushSettings(userId: string, settings: Settings) {
+// ============================================================
+// PULL: Fetch remote catches that don't exist locally
+// Never overwrites local data — only adds missing records
+// ============================================================
+
+export async function pullRemoteCatches(userId: string): Promise<void> {
   if (!supabase) return;
-  await supabase.from('settings').upsert({
-    user_id: userId,
-    units: settings.units,
-    temp_unit: settings.tempUnit,
-    save_location: settings.saveLocation,
-    favourite_species: settings.favouriteSpecies,
-    default_water_type: settings.defaultWaterType ?? null,
-    theme: settings.theme,
-  });
+  try {
+    const { data, error } = await supabase
+      .from('catches')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('deleted', false)
+      .order('created_at', { ascending: false });
+
+    if (error || !data) {
+      console.error('[sync] Pull error:', error);
+      return;
+    }
+
+    for (const row of data) {
+      const existing = await db.catches.get(row.id);
+      if (!existing) {
+        // Remote catch not in local DB — insert it
+        await db.catches.put(fromRow(row));
+      }
+      // If it exists locally, keep local version (it may have newer edits)
+    }
+  } catch (e) {
+    console.error('[sync] Pull catches error:', e);
+  }
+}
+
+// ============================================================
+// SETTINGS SYNC
+// ============================================================
+
+export async function pushSettings(userId: string, settings: Settings): Promise<void> {
+  if (!supabase) return;
+  try {
+    await supabase.from('settings').upsert({
+      user_id: userId,
+      units: settings.units,
+      temp_unit: settings.tempUnit,
+      save_location: settings.saveLocation,
+      favourite_species: settings.favouriteSpecies,
+      default_water_type: settings.defaultWaterType ?? null,
+      theme: settings.theme,
+    });
+  } catch (e) {
+    console.error('[sync] Push settings error:', e);
+  }
 }
 
 export async function pullSettings(userId: string): Promise<Partial<Settings> | null> {
@@ -106,22 +159,30 @@ export async function pullSettings(userId: string): Promise<Partial<Settings> | 
   };
 }
 
-export async function pushCalendarPlans(userId: string) {
+// ============================================================
+// CALENDAR PLANS SYNC
+// ============================================================
+
+export async function pushCalendarPlans(userId: string): Promise<void> {
   if (!supabase) return;
   const stored = localStorage.getItem('caught_calendar_plans');
   if (!stored) return;
-  const plans = JSON.parse(stored) as { date: number; rating: string; score: number }[];
-  for (const p of plans) {
-    await supabase.from('calendar_plans').upsert({
-      user_id: userId,
-      plan_date: p.date,
-      rating: p.rating,
-      score: p.score,
-    });
+  try {
+    const plans = JSON.parse(stored) as { date: number; rating: string; score: number }[];
+    for (const p of plans) {
+      await supabase.from('calendar_plans').upsert({
+        user_id: userId,
+        plan_date: p.date,
+        rating: p.rating,
+        score: p.score,
+      });
+    }
+  } catch (e) {
+    console.error('[sync] Push plans error:', e);
   }
 }
 
-export async function pullCalendarPlans(userId: string) {
+export async function pullCalendarPlans(userId: string): Promise<void> {
   if (!supabase) return;
   const { data, error } = await supabase
     .from('calendar_plans')
@@ -139,13 +200,19 @@ export async function pullCalendarPlans(userId: string) {
   localStorage.setItem('caught_calendar_plans', JSON.stringify(plans));
 }
 
-export async function fullSync(userId: string) {
+// ============================================================
+// INITIAL SYNC: Called once when user logs in
+// Pulls remote catches + settings, then pushes local queue
+// ============================================================
+
+export async function initialSync(userId: string): Promise<void> {
   try {
-    const localCount = await db.catches.count();
-    console.log(`[sync] Starting fullSync for user ${userId}. Local catches: ${localCount}`);
+    console.log('[sync] Initial sync for user', userId);
+    // 1. Pull remote catches that we don't have locally
     await pullRemoteCatches(userId);
-    await pushLocalCatches(userId);
-    // Sync settings
+    // 2. Push any unsynced local catches to remote
+    await syncPushQueue(userId);
+    // 3. Sync settings
     const remoteSettings = await pullSettings(userId);
     if (remoteSettings) {
       const local = loadSettings();
@@ -155,11 +222,41 @@ export async function fullSync(userId: string) {
     } else {
       await pushSettings(userId, loadSettings());
     }
+    // 4. Sync calendar plans
     await pullCalendarPlans(userId);
     await pushCalendarPlans(userId);
-    const afterCount = await db.catches.count();
-    console.log(`[sync] fullSync complete. Local catches: ${afterCount}`);
+    console.log('[sync] Initial sync complete');
   } catch (e) {
-    console.error('Sync error:', e);
+    console.error('[sync] Initial sync error:', e);
   }
 }
+
+// ============================================================
+// LIGHTWEIGHT SYNC: Called on online event + after each save
+// Just pushes the queue — no pulling needed for routine saves
+// ============================================================
+
+export async function quickSync(userId: string): Promise<void> {
+  try {
+    await syncPushQueue(userId);
+  } catch (e) {
+    console.error('[sync] Quick sync error:', e);
+  }
+}
+
+// ============================================================
+// MARK FOR SYNC: Called when a catch is created/updated/deleted
+// Sets syncedAt to 0 so the push queue picks it up
+// ============================================================
+
+export function markUnsynced(catchId: string): void {
+  db.catches.update(catchId, { syncedAt: 0 }).catch((e) =>
+    console.error('[sync] markUnsynced error:', e)
+  );
+}
+
+// Soft-delete: mark as deleted, will be pushed then cleaned up
+export async function softDeleteCatch(catchId: string): Promise<void> {
+  await db.catches.update(catchId, { deleted: true, syncedAt: 0 });
+}
+

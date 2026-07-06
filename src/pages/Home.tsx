@@ -5,6 +5,7 @@ import { Settings as SettingsIcon, Check, Plus, Cloud, X } from 'lucide-react';
 import { db } from '../db';
 import type { CatchRecord } from '../types';
 import { enrichCatch } from '../lib/enrich';
+import { quickSync } from '../lib/sync';
 import { useSettings } from '../hooks/useSettings';
 import { useAuth } from '../hooks/useAuth';
 import BottomSheet from '../components/BottomSheet';
@@ -87,7 +88,7 @@ export default function Home() {
   const incompleteCatches = useLiveQuery(
     async () => {
       const all = await db.catches.toArray();
-      return all.filter((c) => !c.complete);
+      return all.filter((c) => !c.complete && !c.deleted);
     },
     [],
   ) ?? [];
@@ -98,7 +99,7 @@ export default function Home() {
   const todayCount = useLiveQuery(
     async () => {
       const all = await db.catches.toArray();
-      return all.filter((c) => c.createdAt >= todayStart).length;
+      return all.filter((c) => !c.deleted && c.createdAt >= todayStart).length;
     },
     [todayStart],
   ) ?? 0;
@@ -116,8 +117,11 @@ export default function Home() {
       createdAt: Date.now(),
       complete: false,
       waterType: settings.defaultWaterType,
+      syncedAt: 0,
     };
     await db.catches.add(rec);
+    // Trigger background sync to push to Supabase
+    if (user) quickSync(user.id);
     setTimeout(() => {
       setSavedId(rec.id);
       enrichCatch(rec.id, settings.saveLocation);

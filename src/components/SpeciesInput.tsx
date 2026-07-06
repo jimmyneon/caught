@@ -15,7 +15,13 @@ export default function SpeciesInput({ value, onChange }: Props) {
   const [settings] = useSettings();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState(value);
-  const catches = useLiveQuery(() => db.catches.toArray(), []) ?? [];
+  const catches = useLiveQuery(
+    async () => {
+      const all = await db.catches.toArray();
+      return all.filter((c) => !c.deleted);
+    },
+    [],
+  ) ?? [];
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => setQuery(value), [value]);

@@ -5,6 +5,7 @@ import type { CatchRecord, Settings } from '../types';
 import { formatWeight } from '../lib/units';
 import { fmtDate } from '../lib/format';
 import { db } from '../db';
+import { softDeleteCatch } from '../lib/sync';
 import BottomSheet from './BottomSheet';
 import ConditionsSummary, { type CondItem } from './ConditionsSummary';
 import { getSpeciesImage } from '../lib/images';
@@ -211,7 +212,7 @@ export default function CatchCard({ record, settings }: { record: CatchRecord; s
           <button
             className="flex items-center gap-3 rounded-xl p-3.5 text-sm font-bold transition-colors active:bg-surface-3"
             style={{ background: 'var(--c-red-soft)', color: 'var(--c-red-accent)' }}
-            onClick={() => { setShowQuickMenu(false); db.catches.delete(record.id); }}
+            onClick={() => { setShowQuickMenu(false); softDeleteCatch(record.id); }}
           >
             <Trash2 size={18} /> Delete catch
           </button>

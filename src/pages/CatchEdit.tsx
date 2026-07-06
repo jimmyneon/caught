@@ -5,6 +5,7 @@ import { db } from '../db';
 import type { CatchRecord, WaterType } from '../types';
 import { useSettings } from '../hooks/useSettings';
 import { fmtDate } from '../lib/format';
+import { softDeleteCatch } from '../lib/sync';
 import SpeciesInput from '../components/SpeciesInput';
 import WeightInput from '../components/WeightInput';
 import MethodSelect from '../components/MethodSelect';
@@ -47,11 +48,11 @@ export default function CatchEdit() {
   }, [id]);
 
   // Auto-save: write to db immediately on every change (no debounce)
-  // Debouncing + flushing on unmount caused DB locks when navigating away
+  // Mark as unsynced so the push queue picks it up
   useEffect(() => {
     if (!rec) return;
     const isComplete = !!(rec.species && rec.weightKg != null);
-    db.catches.put({ ...rec, complete: isComplete }).catch((e) => 
+    db.catches.put({ ...rec, complete: isComplete, syncedAt: 0 }).catch((e) => 
       console.error('[CatchEdit] save error:', e)
     );
   }, [rec]);
@@ -62,7 +63,7 @@ export default function CatchEdit() {
 
   const remove = async () => {
     if (confirm('Delete this catch?')) {
-      await db.catches.delete(rec.id);
+      await softDeleteCatch(rec.id);
       navigate('/log');
     }
   };

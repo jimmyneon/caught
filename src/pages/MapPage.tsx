@@ -33,7 +33,13 @@ function pinIcon(color: string): L.DivIcon {
 
 export default function MapPage() {
   const [settings] = useSettings();
-  const catches = useLiveQuery(() => db.catches.toArray(), []);
+  const catches = useLiveQuery(
+    async () => {
+      const all = await db.catches.toArray();
+      return all.filter((c) => !c.deleted);
+    },
+    [],
+  ) ?? [];
 
   if (!catches) return null;
   const located = catches.filter((c) => c.lat != null && c.lon != null);
