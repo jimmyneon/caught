@@ -133,6 +133,7 @@ export async function pushSettings(userId: string, settings: Settings): Promise<
       temp_unit: settings.tempUnit,
       save_location: settings.saveLocation,
       favourite_species: settings.favouriteSpecies,
+      favourite_baits: settings.favouriteBaits ?? [],
       default_water_type: settings.defaultWaterType ?? null,
       theme: settings.theme,
     });
@@ -156,6 +157,7 @@ export async function pullSettings(userId: string): Promise<Partial<Settings> | 
     tempUnit: data.temp_unit,
     saveLocation: data.save_location,
     favouriteSpecies: data.favourite_species ?? [],
+    favouriteBaits: data.favourite_baits ?? [],
     defaultWaterType: data.default_water_type ?? undefined,
     theme: data.theme,
   };

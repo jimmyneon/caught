@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { db } from '../db';
 import { useSettings } from '../hooks/useSettings';
-import CatchCard from '../components/CatchCard';
+import DaySummary from '../components/DaySummary';
 import BottomSheet from '../components/BottomSheet';
 
 const DAY_NAMES = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
@@ -115,20 +115,9 @@ export default function CalendarPage() {
       </div>
 
       <BottomSheet open={!!selected} onClose={() => setSelected(null)}>
-        <div className="flex flex-col gap-4">
-          <h2 className="text-lg font-extrabold text-ink">
-            {selected ? new Date(selected).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' }) : ''}
-          </h2>
-          {selectedCatches.length === 0 ? (
-            <p className="text-center text-sm text-ink-3">No catches this day</p>
-          ) : (
-            <div className="flex flex-col gap-3">
-              {selectedCatches.map((c) => (
-                <CatchCard key={c.id} record={c} settings={settings} />
-              ))}
-            </div>
-          )}
-        </div>
+        {selected ? (
+          <DaySummary catches={selectedCatches} settings={settings} date={selected} />
+        ) : null}
       </BottomSheet>
     </div>
   );

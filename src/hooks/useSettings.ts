@@ -11,6 +11,7 @@ const DEFAULTS: Settings = {
   tempUnit: 'celsius',
   saveLocation: true,
   favouriteSpecies: [],
+  favouriteBaits: [],
   defaultWaterType: undefined,
   theme: 'dawn',
 };

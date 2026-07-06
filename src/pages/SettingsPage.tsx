@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Plus, Sun, Moon, Cloud, LogOut, User } from 'lucide-react';
+import { X, Plus, Sun, Moon, Cloud, LogOut, User, Search } from 'lucide-react';
 import { useSettings } from '../hooks/useSettings';
 import { useAuth } from '../hooks/useAuth';
 import type { WaterType, Theme } from '../types';
+import { BAIT_METHODS } from '../lib/baitMethods';
 
 const WATER_TYPES: WaterType[] = ['sea', 'river', 'lake', 'canal', 'reservoir', 'pond', 'stream', 'estuary', 'stillwater', 'loch'];
 
@@ -12,6 +13,8 @@ export default function SettingsPage() {
   const { user, signOut, isSupabaseConfigured } = useAuth();
   const navigate = useNavigate();
   const [newSpecies, setNewSpecies] = useState('');
+  const [baitSearch, setBaitSearch] = useState(false);
+  const [baitQuery, setBaitQuery] = useState('');
 
   const addSpecies = () => {
     const s = newSpecies.trim();
@@ -20,6 +23,24 @@ export default function SettingsPage() {
     }
     setNewSpecies('');
   };
+
+  const toggleBait = (name: string) => {
+    const current = settings.favouriteBaits ?? [];
+    if (current.includes(name)) {
+      update({ favouriteBaits: current.filter((b) => b !== name) });
+    } else {
+      update({ favouriteBaits: [...current, name] });
+    }
+  };
+
+  const filteredBaits = useMemo(() => {
+    const q = baitQuery.trim().toLowerCase();
+    if (!q) return BAIT_METHODS;
+    return BAIT_METHODS.filter((m) =>
+      m.name.toLowerCase().includes(q) ||
+      m.aliases?.some((a) => a.toLowerCase().includes(q))
+    );
+  }, [baitQuery]);
 
   return (
     <div className="px-5 pt-[calc(1rem+env(safe-area-inset-top))] pb-20">
@@ -142,6 +163,74 @@ export default function SettingsPage() {
               <Plus size={20} />
             </button>
           </div>
+        </section>
+
+        <section className="card p-4">
+          <label className="label">Popular baits</label>
+          <p className="mb-3 text-xs text-ink-3">Shown first when selecting methods — saves you scrolling</p>
+          <div className="mb-3 flex flex-wrap gap-2">
+            {(settings.favouriteBaits ?? []).length === 0 && (
+              <p className="text-xs text-ink-3">Pick the baits you use most</p>
+            )}
+            {(settings.favouriteBaits ?? []).map((b) => (
+              <span key={b} className="chip">
+                {b}
+                <button
+                  onClick={() => toggleBait(b)}
+                  aria-label={`Remove ${b}`}
+                >
+                  <X size={12} />
+                </button>
+              </span>
+            ))}
+          </div>
+          {!baitSearch ? (
+            <button
+              className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold transition-colors active:bg-surface-3"
+              style={{ background: 'var(--c-surface-3)', color: 'var(--c-ink-2)' }}
+              onClick={() => setBaitSearch(true)}
+            >
+              <Plus size={16} /> Add bait
+            </button>
+          ) : (
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-2 rounded-xl px-3" style={{ background: 'var(--c-surface-3)' }}>
+                <Search size={16} style={{ color: 'var(--c-ink-3)' }} />
+                <input
+                  className="flex-1 bg-transparent py-2.5 text-sm outline-none"
+                  placeholder="Search baits…"
+                  value={baitQuery}
+                  onChange={(e) => setBaitQuery(e.target.value)}
+                  autoFocus
+                />
+                <button
+                  className="text-xs font-bold text-ink-3"
+                  onClick={() => { setBaitSearch(false); setBaitQuery(''); }}
+                >
+                  Done
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {filteredBaits.slice(0, 24).map((m) => {
+                  const selected = (settings.favouriteBaits ?? []).includes(m.name);
+                  return (
+                    <button
+                      key={m.name}
+                      className="rounded-xl px-3.5 py-2.5 text-sm font-bold transition-all active:scale-95"
+                      style={
+                        selected
+                          ? { background: 'var(--c-accent)', color: '#fff' }
+                          : { background: 'var(--c-surface-3)', color: 'var(--c-ink-2)' }
+                      }
+                      onClick={() => toggleBait(m.name)}
+                    >
+                      {m.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </section>
 
         <section className="card p-4">

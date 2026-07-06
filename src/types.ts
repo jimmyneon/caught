@@ -47,6 +47,7 @@ export interface Settings {
   tempUnit: 'celsius' | 'fahrenheit';
   saveLocation: boolean;
   favouriteSpecies: string[];
+  favouriteBaits: string[];
   defaultWaterType?: WaterType;
   theme: Theme;
 }

@@ -43,6 +43,7 @@ create table if not exists public.settings (
   temp_unit text not null default 'celsius',
   save_location boolean not null default true,
   favourite_species text[] not null default '{}',
+  favourite_baits text[] not null default '{}',
   default_water_type text,
   theme text not null default 'dawn',
   updated_at bigint not null default (extract(epoch from now()) * 1000)::bigint

@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { ChevronDown, Check, Search } from 'lucide-react';
 import BottomSheet from './BottomSheet';
+import { useSettings } from '../hooks/useSettings';
 import { getMethodImage, getFilteredMethods, getMethodSubTypes, METHOD_CATEGORIES, type BaitMethod } from '../lib/baitMethods';
 
 interface Props {
@@ -13,10 +14,12 @@ interface Props {
 }
 
 export default function MethodSelect({ value, subType, species, onChange, onSubTypeChange, allowCustom = true }: Props) {
+  const [settings] = useSettings();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [customMode, setCustomMode] = useState(false);
   const [customValue, setCustomValue] = useState('');
+  const favouriteBaits = settings.favouriteBaits ?? [];
 
   const grouped = useMemo(() => {
     const methods = getFilteredMethods(species);
@@ -33,10 +36,19 @@ export default function MethodSelect({ value, subType, species, onChange, onSubT
       if (!map.has(m.category)) map.set(m.category, []);
       map.get(m.category)!.push(m);
     }
+    // Sort favourite baits first within each category
+    for (const [, items] of map) {
+      items.sort((a, b) => {
+        const aFav = favouriteBaits.includes(a.name) ? 0 : 1;
+        const bFav = favouriteBaits.includes(b.name) ? 0 : 1;
+        if (aFav !== bFav) return aFav - bFav;
+        return a.name.localeCompare(b.name);
+      });
+    }
     return METHOD_CATEGORIES
       .filter((c) => map.has(c.key))
       .map((c) => ({ ...c, items: map.get(c.key)! }));
-  }, [species, query]);
+  }, [species, query, favouriteBaits]);
 
   const [showSubTypes, setShowSubTypes] = useState(false);
 
