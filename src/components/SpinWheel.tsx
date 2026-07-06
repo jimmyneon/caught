@@ -201,43 +201,55 @@ export default function SpinWheel({ values, value, onChange, unit }: Props) {
 
   return (
     <div className="flex flex-1 flex-col items-center select-none">
-      <div className="mb-1.5 text-xs font-bold uppercase tracking-wide text-ink-3">{unit}</div>
       <div
         ref={containerRef}
-        className="relative w-full overflow-hidden"
-        style={{ height: HEIGHT, touchAction: 'none' }}
+        className="relative w-full overflow-hidden rounded-2xl"
+        style={{ height: HEIGHT, touchAction: 'none', background: 'var(--c-surface-3)' }}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
         onMouseDown={onMouseDown}
       >
-        {/* Center selection highlight */}
+        {/* Center selection highlight — wider, with accent border and subtle shadow */}
         <div
-          className="pointer-events-none absolute left-2 right-2 rounded-xl"
+          className="pointer-events-none absolute left-0 right-0 rounded-xl"
           style={{
             top: HALF * ITEM_H,
             height: ITEM_H,
-            background: 'var(--c-accent-bg)',
-            borderTop: '2px solid var(--c-accent)',
-            borderBottom: '2px solid var(--c-accent)',
+            background: 'var(--c-surface)',
+            borderTop: '3px solid var(--c-accent)',
+            borderBottom: '3px solid var(--c-accent)',
+            boxShadow: '0 0 12px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.05)',
           }}
         />
 
-        {/* Top/bottom fade — subtle, only 40% opacity so numbers remain visible */}
+        {/* Unit label — inside the highlight bar on the left */}
         <div
-          className="pointer-events-none absolute inset-x-0 top-0 z-10"
+          className="pointer-events-none absolute z-20 flex items-center"
+          style={{
+            top: HALF * ITEM_H,
+            height: ITEM_H,
+            left: '0.75rem',
+          }}
+        >
+          <span className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--c-accent)', opacity: 0.7 }}>{unit}</span>
+        </div>
+
+        {/* Top/bottom fade — very subtle so numbers stay visible */}
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 z-10 rounded-t-2xl"
           style={{
             height: HALF * ITEM_H,
-            background: 'linear-gradient(180deg, var(--c-surface-2) 0%, transparent 100%)',
-            opacity: 0.7,
+            background: 'linear-gradient(180deg, var(--c-surface-3) 0%, transparent 100%)',
+            opacity: 0.5,
           }}
         />
         <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 z-10"
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-10 rounded-b-2xl"
           style={{
             height: HALF * ITEM_H,
-            background: 'linear-gradient(0deg, var(--c-surface-2) 0%, transparent 100%)',
-            opacity: 0.7,
+            background: 'linear-gradient(0deg, var(--c-surface-3) 0%, transparent 100%)',
+            opacity: 0.5,
           }}
         />
 
@@ -259,11 +271,12 @@ export default function SpinWheel({ values, value, onChange, unit }: Props) {
                 className="flex items-center justify-center tabular-nums"
                 style={{
                   height: ITEM_H,
-                  fontSize: isSelected ? '1.6rem' : distance === 1 ? '1.2rem' : '1rem',
-                  fontWeight: isSelected ? 800 : distance === 1 ? 600 : 400,
+                  fontSize: isSelected ? '1.75rem' : distance === 1 ? '1.25rem' : '1rem',
+                  fontWeight: isSelected ? 900 : distance === 1 ? 600 : 400,
                   color: isSelected ? 'var(--c-ink)' : 'var(--c-ink-2)',
-                  opacity: isSelected ? 1 : distance === 1 ? 0.7 : 0.4,
+                  opacity: isSelected ? 1 : distance === 1 ? 0.6 : 0.3,
                   transition: 'font-size 0.15s, font-weight 0.15s, opacity 0.15s',
+                  textShadow: isSelected ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
                 }}
               >
                 {v}

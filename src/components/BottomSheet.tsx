@@ -29,6 +29,7 @@ export default function BottomSheet({ open, children, title, onClose, fullHeight
   const sheetRef = useRef<HTMLDivElement>(null);
   const dragYRef = useRef(0);
   const startYRef = useRef<number | null>(null);
+  const startScrollTopRef = useRef(0);
   const isDraggingRef = useRef(false);
   const onCloseRef = useRef(onClose);
 
@@ -47,43 +48,50 @@ export default function BottomSheet({ open, children, title, onClose, fullHeight
     }
   }, [open]);
 
-  // Drag-to-close on the entire sheet (not just the handle)
+  // Drag-to-close from anywhere on the sheet
   useEffect(() => {
     const el = sheetRef.current;
     if (!el) return;
 
     const onTouchStart = (e: TouchEvent) => {
-      // Only start drag tracking if touch starts on the sheet
       startYRef.current = e.touches[0].clientY;
       isDraggingRef.current = false;
+      // Track whether content is scrolled at start
+      startScrollTopRef.current = el.scrollTop;
     };
 
     const onTouchMove = (e: TouchEvent) => {
       if (startYRef.current == null) return;
       const delta = e.touches[0].clientY - startYRef.current;
 
-      // Only drag down (positive delta)
-      if (delta > 0) {
-        // Check if content is scrolled to top
-        const scrollTop = el.scrollTop;
-        if (scrollTop <= 0) {
-          // Content at top — start dragging the sheet
-          isDraggingRef.current = true;
-          e.preventDefault();
-          dragYRef.current = delta;
-          setDragY(delta);
-        }
+      // Only respond to downward drag
+      if (delta <= 0) return;
+
+      // If content was scrolled at start, let the browser handle it
+      // until content scrolls back to top
+      if (startScrollTopRef.current > 0 && el.scrollTop > 0) {
+        // Content still scrolled — don't drag sheet yet
+        return;
       }
+
+      // Content is at top (or was at top) — drag the sheet down
+      isDraggingRef.current = true;
+      e.preventDefault();
+      // Apply slight rubber band resistance
+      const resisted = delta * 0.8;
+      dragYRef.current = resisted;
+      setDragY(resisted);
     };
 
     const onTouchEnd = () => {
-      if (isDraggingRef.current && dragYRef.current > 100) {
+      if (isDraggingRef.current && dragYRef.current > 80) {
         onCloseRef.current?.();
       }
       dragYRef.current = 0;
       setDragY(0);
       startYRef.current = null;
       isDraggingRef.current = false;
+      startScrollTopRef.current = 0;
     };
 
     el.addEventListener('touchstart', onTouchStart, { passive: true });
