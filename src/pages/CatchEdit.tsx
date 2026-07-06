@@ -126,7 +126,6 @@ export default function CatchEdit() {
         {/* Bait — the actual bait/lure/fly, filtered by method + species + water type */}
         <BaitSelect
           value={rec.baitSubType}
-          subType={undefined}
           method={rec.method}
           species={rec.species}
           waterType={rec.waterType}

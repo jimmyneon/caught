@@ -1,14 +1,14 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Settings as SettingsIcon, Check, Plus, Cloud, Sparkles, ArrowRight } from 'lucide-react';
+import { Settings as SettingsIcon, Check, Plus, Cloud } from 'lucide-react';
 import { db } from '../db';
 import type { CatchRecord } from '../types';
 import { enrichCatch, retryPendingEnrichment } from '../lib/enrich';
-import { getSpeciesImage } from '../lib/images';
 import { useSettings } from '../hooks/useSettings';
 import { useAuth } from '../hooks/useAuth';
 import BottomSheet from '../components/BottomSheet';
+import QuickFillSheet from '../components/QuickFillSheet';
 
 const BG_IMAGES = {
   dawn: '/dawn.jpg',
@@ -120,68 +120,6 @@ export default function Home() {
   ) ?? [];
 
   const incomplete = incompleteCatches.length;
-
-  // Query completed catches to build smart suggestions based on water type
-  const completedCatches = useLiveQuery(
-    async () => {
-      const all = await db.catches.toArray();
-      return all.filter((c) => c.complete && !c.deleted);
-    },
-    [],
-  ) ?? [];
-
-  // Build suggestions: most common species/method/bait per water type
-  const suggestions = useMemo(() => {
-    const byWaterType = new Map<string, { species: string; method: string; baitSubType: string }[]>();
-    for (const c of completedCatches) {
-      const wt = c.waterType ?? 'unknown';
-      if (!byWaterType.has(wt)) byWaterType.set(wt, []);
-      byWaterType.get(wt)!.push({
-        species: c.species ?? '',
-        method: c.method ?? '',
-        baitSubType: c.baitSubType ?? '',
-      });
-    }
-
-    const result = new Map<string, { species?: string; method?: string; baitSubType?: string }>();
-    for (const [wt, catches] of byWaterType) {
-      // Count frequency
-      const speciesCount = new Map<string, number>();
-      const methodCount = new Map<string, number>();
-      const baitCount = new Map<string, number>();
-      for (const c of catches) {
-        if (c.species) speciesCount.set(c.species, (speciesCount.get(c.species) ?? 0) + 1);
-        if (c.method) methodCount.set(c.method, (methodCount.get(c.method) ?? 0) + 1);
-        if (c.baitSubType) baitCount.set(c.baitSubType, (baitCount.get(c.baitSubType) ?? 0) + 1);
-      }
-      // Get most frequent
-      const topSpecies = [...speciesCount.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
-      const topMethod = [...methodCount.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
-      const topBait = [...baitCount.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
-      result.set(wt, {
-        species: topSpecies,
-        method: topMethod,
-        baitSubType: topBait,
-      });
-    }
-    return result;
-  }, [completedCatches]);
-
-  // Quick-fill: apply suggestion to an incomplete catch
-  const quickFill = async (catchId: string, wt?: string) => {
-    const suggestion = wt ? suggestions.get(wt) : undefined;
-    if (!suggestion) return;
-    const rec = await db.catches.get(catchId);
-    if (!rec) return;
-    const patch: Partial<CatchRecord> = {};
-    if (!rec.species && suggestion.species) patch.species = suggestion.species;
-    if (!rec.method && suggestion.method) patch.method = suggestion.method;
-    if (!rec.baitSubType && suggestion.baitSubType) patch.baitSubType = suggestion.baitSubType;
-    if (Object.keys(patch).length > 0) {
-      const isComplete = !!(patch.species ?? rec.species) && (patch.weightKg ?? rec.weightKg) != null;
-      await db.catches.update(catchId, { ...patch, complete: isComplete, syncedAt: 0 });
-    }
-  };
 
   const todayStart = new Date().setHours(0, 0, 0, 0);
   const todayCount = useLiveQuery(
@@ -340,132 +278,24 @@ export default function Home() {
         )}
       </div>
 
-      {/* Incomplete catches sheet — with smart suggestions */}
-      <BottomSheet open={showIncomplete} onClose={() => setShowIncomplete(false)} title="Incomplete catches">
-        <div className="flex flex-col gap-3">
-          <p className="text-sm text-ink-3">
-            {incomplete} catch{incomplete > 1 ? 'es' : ''} need details. Tap one to edit, or use suggestions to quick-fill.
-          </p>
+      {/* Quick-fill sheet for incomplete catches */}
+      <QuickFillSheet open={showIncomplete} onClose={() => setShowIncomplete(false)} />
 
-          {incompleteCatches.map((c) => {
-            const img = getSpeciesImage(c.species ?? '');
-            const suggestion = c.waterType ? suggestions.get(c.waterType) : undefined;
-            const hasSuggestion = suggestion && (
-              (suggestion.species && !c.species) ||
-              (suggestion.method && !c.method) ||
-              (suggestion.baitSubType && !c.baitSubType)
-            );
-            const missing: string[] = [];
-            if (!c.species) missing.push('species');
-            if (c.weightKg == null) missing.push('weight');
-            if (!c.method) missing.push('method');
-
-            return (
-              <div
-                key={c.id}
-                className="rounded-xl p-3"
-                style={{ background: 'var(--c-surface-3)' }}
-              >
-                <div className="flex items-center gap-3">
-                  {img ? (
-                    <img src={img} alt="" className="h-12 w-12 rounded-lg object-cover" />
-                  ) : (
-                    <div className="flex h-12 w-12 items-center justify-center rounded-lg" style={{ background: 'var(--c-accent-bg)' }}>
-                      <Plus size={20} style={{ color: 'var(--c-accent)' }} />
-                    </div>
-                  )}
-                  <button
-                    onClick={() => {
-                      setShowIncomplete(false);
-                      navigate(`/catch/${c.id}`);
-                    }}
-                    className="flex-1 text-left"
-                  >
-                    <div className="text-sm font-bold text-ink">{c.species || 'Unknown fish'}</div>
-                    <div className="text-xs text-ink-3">
-                      {new Date(c.createdAt).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}
-                      {c.waterType && ` · ${c.waterType}`}
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowIncomplete(false);
-                      navigate(`/catch/${c.id}`);
-                    }}
-                    className="flex h-9 w-9 items-center justify-center rounded-lg"
-                    style={{ background: 'var(--c-accent-bg)' }}
-                  >
-                    <ArrowRight size={18} style={{ color: 'var(--c-accent)' }} />
-                  </button>
-                </div>
-
-                {/* Missing fields */}
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {missing.map((m) => (
-                    <span
-                      key={m}
-                      className="rounded-full px-2.5 py-0.5 text-xs font-medium"
-                      style={{ background: 'var(--c-surface)', color: 'var(--c-ink-3)' }}
-                    >
-                      No {m}
-                    </span>
-                  ))}
-                </div>
-
-                {/* Smart suggestion */}
-                {hasSuggestion && (
-                  <div className="mt-2.5 rounded-lg p-2.5" style={{ background: 'var(--c-surface)', border: '1px solid var(--c-line)' }}>
-                    <div className="mb-1.5 flex items-center gap-1.5 text-xs font-bold" style={{ color: 'var(--c-accent)' }}>
-                      <Sparkles size={12} /> Suggested from your past catches
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {suggestion.species && !c.species && (
-                        <span className="rounded-full px-2.5 py-1 text-xs font-medium" style={{ background: 'var(--c-accent-bg)', color: 'var(--c-accent)' }}>
-                          {suggestion.species}
-                        </span>
-                      )}
-                      {suggestion.method && !c.method && (
-                        <span className="rounded-full px-2.5 py-1 text-xs font-medium" style={{ background: 'var(--c-accent-bg)', color: 'var(--c-accent)' }}>
-                          {suggestion.method}
-                        </span>
-                      )}
-                      {suggestion.baitSubType && !c.baitSubType && (
-                        <span className="rounded-full px-2.5 py-1 text-xs font-medium" style={{ background: 'var(--c-accent-bg)', color: 'var(--c-accent)' }}>
-                          {suggestion.baitSubType}
-                        </span>
-                      )}
-                    </div>
-                    <button
-                      className="mt-2 text-xs font-bold"
-                      style={{ color: 'var(--c-accent)' }}
-                      onClick={() => quickFill(c.id, c.waterType)}
-                    >
-                      Apply suggestions →
-                    </button>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </BottomSheet>
-
-      {/* Catch saved slide-up */}
+      {/* Catch saved slide-up — compact, sits just above the button */}
       <BottomSheet open={!!savedId} onClose={() => setSavedId(null)}>
-        <div className="flex min-h-[60vh] flex-col items-center gap-4">
+        <div className="flex flex-col items-center gap-3 py-2">
           <div
-            className="flex h-14 w-14 items-center justify-center rounded-full animate-check-pop"
+            className="flex h-12 w-12 items-center justify-center rounded-full animate-check-pop"
             style={{ background: 'var(--c-accent-bg)' }}
           >
-            <Check size={28} strokeWidth={3} style={{ color: 'var(--c-accent)' }} />
+            <Check size={24} strokeWidth={3} style={{ color: 'var(--c-accent)' }} />
           </div>
           <div className="text-center">
-            <h2 className="text-xl font-extrabold text-ink">Catch logged</h2>
-            <p className="mt-1.5 text-sm leading-relaxed text-ink-3">
+            <h2 className="text-lg font-extrabold text-ink">Catch logged</h2>
+            <p className="mt-1 text-xs leading-relaxed text-ink-3">
               Time, location &amp; conditions saved automatically.
             </p>
           </div>
-          <div className="flex-1" />
           <button
             className="btn-primary w-full"
             onClick={() => {
