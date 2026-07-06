@@ -104,7 +104,7 @@ export default function BaitSelect({ value, method, species, waterType, onChange
     }
 
     const cat = categories?.length === 1 ? categories[0] : undefined;
-    const results = searchBaits(input, cat, 30);
+    const results = searchBaits(input, cat, 50);
 
     if (categories && categories.length > 1) {
       return results.filter((r) => categories!.includes(r.category));
