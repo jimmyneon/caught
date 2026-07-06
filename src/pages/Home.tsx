@@ -129,17 +129,18 @@ export default function Home() {
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-black">
-      {/* Full-screen background photo with subtle parallax */}
+      {/* Full-screen background photo — fixed to cover entire viewport including nav bar */}
       <img
         ref={bgRef}
         src={bgUrl}
         alt=""
-        className="absolute inset-0 h-full w-full object-cover transition-opacity duration-300"
+        className="fixed inset-0 h-full w-full object-cover transition-opacity duration-300"
         style={{
           transform: 'scale(1.18) perspective(800px)',
           willChange: 'transform',
           pointerEvents: 'none',
           opacity: bgLoaded ? 1 : 0,
+          zIndex: 0,
         }}
         loading="eager"
         decoding="async"
@@ -147,12 +148,13 @@ export default function Home() {
         onLoad={() => setBgLoaded(true)}
       />
       <div
-        className="absolute inset-0"
+        className="fixed inset-0"
         style={{
           background:
             settings.theme === 'dusk'
               ? 'linear-gradient(180deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.15) 30%, rgba(0,0,0,0.7) 100%)'
               : 'linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.02) 30%, rgba(0,0,0,0.55) 100%)',
+          zIndex: 0,
         }}
       />
 

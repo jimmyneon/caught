@@ -74,6 +74,7 @@ export default function PlanPage() {
   const [calendarConfirm, setCalendarConfirm] = useState<DayScore | null>(null);
   const [previewLoc, setPreviewLoc] = useState<GeoLocation | null>(null);
   const [showMapPicker, setShowMapPicker] = useState(false);
+  const [showCurrentPreview, setShowCurrentPreview] = useState(false);
 
   const longPressTimer = useRef<number | null>(null);
 
@@ -112,6 +113,17 @@ export default function PlanPage() {
       { timeout: 10000, maximumAge: 60000 },
     );
   }, []);
+
+  // Re-request GPS when current location preview opens if we don't have coords
+  useEffect(() => {
+    if (showCurrentPreview && !userCoords && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => setUserCoords({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+        () => {},
+        { timeout: 10000, enableHighAccuracy: true },
+      );
+    }
+  }, [showCurrentPreview, userCoords]);
 
   useEffect(() => {
     if (searchQuery.trim().length < 2) { setSearchResults([]); return; }
@@ -215,16 +227,19 @@ export default function PlanPage() {
       </div>
 
       {/* Location slide-up */}
-      <BottomSheet open={showLocationMenu} fullHeight onClose={() => { setShowLocationMenu(false); setPreviewLoc(null); setShowMapPicker(false); }}>
+      <BottomSheet open={showLocationMenu} fullHeight onClose={() => { setShowLocationMenu(false); setPreviewLoc(null); setShowMapPicker(false); setShowCurrentPreview(false); }}>
         <div className="flex h-full flex-col gap-3">
           <h2 className="text-xl font-extrabold text-ink">Location</h2>
 
-          {!showMapPicker && !previewLoc && (
+          {!showMapPicker && !previewLoc && !showCurrentPreview && (
             <>
               <button
                 className="flex w-full items-center gap-3 rounded-xl p-3.5 text-sm font-bold transition-colors active:bg-surface-3"
                 style={{ background: locationMode === 'current' ? 'var(--c-accent-bg)' : 'var(--c-surface-3)', color: locationMode === 'current' ? 'var(--c-accent)' : 'var(--c-ink)' }}
-                onClick={() => { setLocationMode('current'); setLocation(null); setShowLocationMenu(false); }}
+                onClick={() => {
+                  setLocationMode('current');
+                  setShowCurrentPreview(true);
+                }}
               >
                 <Navigation size={18} /> Use current location
                 {locationMode === 'current' && <Check size={16} className="ml-auto" />}
@@ -305,6 +320,55 @@ export default function PlanPage() {
                   setSearchQuery('');
                   setSearchResults([]);
                   setPreviewLoc(null);
+                  setShowLocationMenu(false);
+                }}
+              >
+                <Check size={18} /> Use this location
+              </button>
+            </div>
+          )}
+
+          {showCurrentPreview && (
+            <div className="flex h-full flex-col gap-3">
+              <button
+                className="flex items-center gap-2 text-sm font-bold text-ink-3"
+                onClick={() => setShowCurrentPreview(false)}
+              >
+                <ChevronDown size={16} /> Back
+              </button>
+              <div className="flex flex-col">
+                <span className="font-bold text-ink">Current location</span>
+                {userCoords ? (
+                  <span className="text-xs text-ink-3">
+                    {userCoords.lat.toFixed(5)}, {userCoords.lon.toFixed(5)}
+                  </span>
+                ) : (
+                  <span className="text-xs text-ink-3">Getting your location…</span>
+                )}
+              </div>
+              {userCoords ? (
+                <div className="flex-1 overflow-hidden rounded-xl">
+                  <MapPreview
+                    lat={userCoords.lat}
+                    lon={userCoords.lon}
+                    height={300}
+                    userLat={userCoords.lat}
+                    userLon={userCoords.lon}
+                  />
+                </div>
+              ) : (
+                <div className="flex flex-1 items-center justify-center">
+                  <Loader2 size={32} className="animate-spin" style={{ color: 'var(--c-ink-3)' }} />
+                </div>
+              )}
+              <button
+                className="btn-primary flex items-center justify-center gap-2"
+                onClick={() => {
+                  if (userCoords) {
+                    setLocation({ lat: userCoords.lat, lon: userCoords.lon, name: 'Current location' });
+                  }
+                  setLocationMode('current');
+                  setShowCurrentPreview(false);
                   setShowLocationMenu(false);
                 }}
               >
