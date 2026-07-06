@@ -1,241 +1,210 @@
 import { useState, useMemo } from 'react';
 import { ChevronDown, Check, Search } from 'lucide-react';
 import BottomSheet from './BottomSheet';
-import { useSettings } from '../hooks/useSettings';
-import { getMethodImage, getFilteredMethods, getMethodSubTypes, METHOD_CATEGORIES, type BaitMethod } from '../lib/baitMethods';
+import { getMethodImage, METHOD_CATEGORIES, type BaitMethod } from '../lib/baitMethods';
+
+// Technique options — just the methods, not individual baits
+const TECHNIQUES: { name: string; category: BaitMethod['category']; image?: string; aliases?: string[] }[] = [
+  // Float
+  { name: 'Float', category: 'float', image: 'float', aliases: ['waggler', 'float fishing'] },
+  { name: 'Pole Float', category: 'float', image: 'pole-float', aliases: ['pole fishing'] },
+  { name: 'Waggler', category: 'float', image: 'waggler' },
+  { name: 'Stick Float', category: 'float', image: 'stick-float' },
+  { name: 'Slider Float', category: 'float', image: 'slider-float' },
+  { name: 'Controller', category: 'float', image: 'controller-float', aliases: ['surface controller'] },
+  // Ledger
+  { name: 'Ledger', category: 'ledger', image: 'ledger', aliases: ['ledgering'] },
+  { name: 'Feeder', category: 'ledger', image: 'feeder', aliases: ['method feeder', 'cage feeder'] },
+  { name: 'Method Feeder', category: 'ledger', image: 'method-feeder' },
+  { name: 'Bomb', category: 'ledger', image: 'bomb', aliases: ['lead bomb'] },
+  { name: 'Link Ledger', category: 'ledger', image: 'link-ledger' },
+  { name: 'Helicopter Rig', category: 'ledger', image: 'helicopter-rig' },
+  { name: 'PVA Bag', category: 'ledger', image: 'pva-bag', aliases: ['pva stick'] },
+  // Lure
+  { name: 'Spinning', category: 'lure', image: 'spinning', aliases: ['spin fishing'] },
+  { name: 'Trolling', category: 'other', image: 'trolling' },
+  // Fly
+  { name: 'Fly Fishing', category: 'fly', image: 'dry-fly', aliases: ['fly'] },
+  // Other
+  { name: 'Freelining', category: 'other', image: 'freelining', aliases: ['free line'] },
+  { name: 'Surface', category: 'other', image: 'surface-bait', aliases: ['surface fishing'] },
+];
 
 interface Props {
   value: string | undefined;
-  subType?: string;
   species?: string;
   waterType?: string;
   onChange: (v: string | undefined) => void;
-  onSubTypeChange?: (v: string | undefined) => void;
-  allowCustom?: boolean;
 }
 
-export default function MethodSelect({ value, subType, species, waterType, onChange, onSubTypeChange, allowCustom = true }: Props) {
-  const [settings] = useSettings();
+// Water type → technique categories
+const WATER_TECHNIQUES: Record<string, BaitMethod['category'][]> = {
+  'sea': ['lure', 'ledger', 'float'],
+  'river': ['float', 'ledger', 'lure', 'fly'],
+  'lake': ['ledger', 'float', 'lure', 'fly'],
+  'canal': ['float', 'ledger', 'lure'],
+  'reservoir': ['fly', 'lure', 'ledger', 'float'],
+  'pond': ['float', 'ledger', 'lure'],
+  'stream': ['fly', 'float'],
+  'estuary': ['ledger', 'lure', 'float'],
+  'stillwater': ['fly', 'lure', 'ledger', 'float'],
+  'loch': ['fly', 'lure', 'ledger'],
+};
+
+// Species → technique categories
+const SPECIES_TECHNIQUES: Record<string, BaitMethod['category'][]> = {
+  'rainbow trout': ['fly', 'ledger'],
+  'brown trout': ['fly', 'ledger'],
+  'sea trout': ['fly', 'lure'],
+  'brook trout': ['fly', 'ledger'],
+  'salmon': ['fly', 'lure'],
+  'grayling': ['fly', 'float'],
+  'carp': ['ledger', 'float'],
+  'mirror carp': ['ledger', 'float'],
+  'leather carp': ['ledger', 'float'],
+  'crucian carp': ['ledger', 'float'],
+  'tench': ['ledger', 'float'],
+  'bream': ['ledger', 'float'],
+  'roach': ['float', 'ledger'],
+  'rudd': ['float'],
+  'perch': ['lure', 'float', 'ledger'],
+  'pike': ['lure', 'ledger'],
+  'zander': ['lure', 'ledger'],
+  'chub': ['float', 'lure', 'ledger'],
+  'dace': ['float', 'fly'],
+  'barbel': ['ledger'],
+  'wels catfish': ['ledger'],
+  'bass': ['lure', 'ledger'],
+  'cod': ['ledger'],
+  'pollack': ['lure'],
+  'mackerel': ['lure', 'float'],
+  'wrasse': ['ledger', 'lure'],
+  'ballan wrasse': ['ledger', 'lure'],
+  'flounder': ['ledger'],
+  'plaice': ['ledger'],
+  'mullet': ['float', 'fly'],
+};
+
+export default function MethodSelect({ value, species, waterType, onChange }: Props) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const [customMode, setCustomMode] = useState(false);
-  const [customValue, setCustomValue] = useState('');
-  const favouriteBaits = settings.favouriteBaits ?? [];
 
   const grouped = useMemo(() => {
-    const methods = getFilteredMethods(species, waterType);
+    let techniques = TECHNIQUES;
+
+    // Filter by species
+    if (species) {
+      const cats = SPECIES_TECHNIQUES[species.toLowerCase().trim()];
+      if (cats) {
+        techniques = techniques.filter((t) => cats.includes(t.category));
+      }
+    }
+
+    // Filter by water type
+    if (waterType) {
+      const cats = WATER_TECHNIQUES[waterType.toLowerCase()];
+      if (cats) {
+        techniques = techniques.filter((t) => cats.includes(t.category));
+      }
+    }
+
+    // Search
     const q = query.trim().toLowerCase();
     const filtered = q
-      ? methods.filter((m) =>
-          m.name.toLowerCase().includes(q) ||
-          m.aliases?.some((a) => a.toLowerCase().includes(q))
+      ? techniques.filter((t) =>
+          t.name.toLowerCase().includes(q) ||
+          t.aliases?.some((a) => a.toLowerCase().includes(q))
         )
-      : methods;
+      : techniques;
 
-    const map = new Map<string, BaitMethod[]>();
-    for (const m of filtered) {
-      if (!map.has(m.category)) map.set(m.category, []);
-      map.get(m.category)!.push(m);
+    // Group by category
+    const map = new Map<string, typeof TECHNIQUES>();
+    for (const t of filtered) {
+      if (!map.has(t.category)) map.set(t.category, []);
+      map.get(t.category)!.push(t);
     }
-    // Sort favourite baits first within each category
-    for (const [, items] of map) {
-      items.sort((a, b) => {
-        const aFav = favouriteBaits.includes(a.name) ? 0 : 1;
-        const bFav = favouriteBaits.includes(b.name) ? 0 : 1;
-        if (aFav !== bFav) return aFav - bFav;
-        return a.name.localeCompare(b.name);
-      });
-    }
+
     return METHOD_CATEGORIES
       .filter((c) => map.has(c.key))
       .map((c) => ({ ...c, items: map.get(c.key)! }));
-  }, [species, waterType, query, favouriteBaits]);
+  }, [species, waterType, query]);
 
-  const [showSubTypes, setShowSubTypes] = useState(false);
-
-  const displayValue = value
-    ? (subType ? `${value} — ${subType}` : value)
-    : 'Select method';
-
-  const subTypes = value ? getMethodSubTypes(value) : [];
+  const contextLabel = useMemo(() => {
+    const parts: string[] = [];
+    if (species) parts.push(species);
+    if (waterType) parts.push(waterType);
+    return parts.length > 0 ? parts.join(' · ') : null;
+  }, [species, waterType]);
 
   return (
     <div>
-      <label className="label">Method / bait</label>
+      <label className="label">Method</label>
       <button
         type="button"
         className="field flex items-center justify-between"
         onClick={() => setOpen(true)}
         style={{ color: value ? 'var(--c-ink)' : 'var(--c-ink-3)' }}
       >
-        <span>{displayValue}</span>
+        <span>{value ?? 'Select method'}</span>
         <ChevronDown size={18} style={{ color: 'var(--c-ink-3)' }} />
       </button>
 
-      <BottomSheet open={open} onClose={() => { setOpen(false); setQuery(''); setCustomMode(false); setShowSubTypes(false); }}>
+      <BottomSheet open={open} onClose={() => { setOpen(false); setQuery(''); }}>
         <div className="flex flex-col gap-3">
-          <h2 className="pb-1 text-lg font-extrabold text-ink">
-            {showSubTypes ? `${value} — select type` : 'Method / bait'}
-          </h2>
+          <h2 className="pb-1 text-lg font-extrabold text-ink">Select method</h2>
 
-          {showSubTypes && (
-            <button
-              className="flex items-center gap-2 text-sm font-bold text-ink-3"
-              onClick={() => setShowSubTypes(false)}
-            >
-              <ChevronDown size={16} /> Back to methods
-            </button>
-          )}
-
-          {showSubTypes && subTypes.length > 0 && (
-            <div className="flex flex-col gap-1.5">
-              {subTypes.map((st) => (
-                <button
-                  key={st}
-                  type="button"
-                  className="flex w-full items-center justify-between rounded-xl px-3 py-3 text-sm font-medium transition-colors active:bg-surface-3"
-                  style={{
-                    background: subType === st ? 'var(--c-accent-bg)' : 'var(--c-surface-3)',
-                    color: subType === st ? 'var(--c-accent)' : 'var(--c-ink)',
-                  }}
-                  onClick={() => {
-                    onSubTypeChange?.(st);
-                    setOpen(false);
-                    setShowSubTypes(false);
-                    setQuery('');
-                  }}
-                >
-                  <span>{st}</span>
-                  {subType === st && <Check size={18} />}
-                </button>
-              ))}
-              {allowCustom && (
-                <button
-                  type="button"
-                  className="rounded-xl px-4 py-3 text-left text-sm font-medium"
-                  style={{ color: 'var(--c-ink-3)', background: 'var(--c-surface-3)' }}
-                  onClick={() => {
-                    const custom = prompt(`Custom ${value} type:`);
-                    if (custom?.trim()) {
-                      onSubTypeChange?.(custom.trim());
-                      setOpen(false);
-                      setShowSubTypes(false);
-                    }
-                  }}
-                >
-                  + Custom…
-                </button>
-              )}
+          {contextLabel && (
+            <div className="rounded-lg px-3 py-2 text-xs font-medium text-ink-3" style={{ background: 'var(--c-surface-3)' }}>
+              {contextLabel}
             </div>
           )}
 
-          {!showSubTypes && (
-            <>
-              {species && (
-                <div className="rounded-lg px-3 py-2 text-xs font-medium text-ink-3" style={{ background: 'var(--c-surface-3)' }}>
-                  Showing methods for {species}
+          {/* Search */}
+          <div className="flex items-center gap-2 rounded-xl px-3" style={{ background: 'var(--c-surface-3)' }}>
+            <Search size={16} style={{ color: 'var(--c-ink-3)' }} />
+            <input
+              className="flex-1 bg-transparent py-2.5 text-sm outline-none"
+              placeholder="Search methods…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </div>
+
+          {/* Grouped techniques */}
+          <div className="flex flex-col gap-4">
+            {grouped.map((group) => (
+              <div key={group.key}>
+                <div className="mb-1.5 text-xs font-bold uppercase tracking-wide text-ink-3">{group.label}</div>
+                <div className="flex flex-col gap-1.5">
+                  {group.items.map((t) => {
+                    const img = getMethodImage(t.name);
+                    return (
+                      <button
+                        key={t.name}
+                        type="button"
+                        className="flex w-full items-center justify-between rounded-xl px-3 py-3 text-sm font-medium transition-colors active:bg-surface-3"
+                        style={{
+                          background: value === t.name ? 'var(--c-accent-bg)' : 'var(--c-surface-3)',
+                          color: value === t.name ? 'var(--c-accent)' : 'var(--c-ink)',
+                        }}
+                        onClick={() => {
+                          onChange(t.name);
+                          setOpen(false);
+                          setQuery('');
+                        }}
+                      >
+                        <span className="flex items-center gap-2.5">
+                          {img && <img src={img} alt={t.name} className="h-8 w-8 rounded-lg object-cover" />}
+                          <span>{t.name}</span>
+                        </span>
+                        {value === t.name && <Check size={18} />}
+                      </button>
+                    );
+                  })}
                 </div>
-              )}
-
-              {/* Search */}
-              <div className="flex items-center gap-2 rounded-xl px-3" style={{ background: 'var(--c-surface-3)' }}>
-                <Search size={16} style={{ color: 'var(--c-ink-3)' }} />
-                <input
-                  className="flex-1 bg-transparent py-2.5 text-sm outline-none"
-                  placeholder="Search methods…"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                />
               </div>
-
-              {/* Grouped options */}
-              <div className="flex flex-col gap-4">
-                {grouped.map((group) => (
-                  <div key={group.key}>
-                    <div className="mb-1.5 text-xs font-bold uppercase tracking-wide text-ink-3">{group.label}</div>
-                    <div className="flex flex-col gap-1.5">
-                      {group.items.map((m) => {
-                        const img = getMethodImage(m.name);
-                        return (
-                          <button
-                            key={m.name}
-                            type="button"
-                            className="flex w-full items-center justify-between rounded-xl px-3 py-3 text-sm font-medium transition-colors active:bg-surface-3"
-                            style={{
-                              background: value === m.name ? 'var(--c-accent-bg)' : 'var(--c-surface-3)',
-                              color: value === m.name ? 'var(--c-accent)' : 'var(--c-ink)',
-                            }}
-                            onClick={() => {
-                              onChange(m.name);
-                              onSubTypeChange?.(undefined);
-                              if (m.collective && m.subTypes && m.subTypes.length > 0) {
-                                setShowSubTypes(true);
-                              } else {
-                                setOpen(false);
-                                setQuery('');
-                              }
-                            }}
-                          >
-                            <span className="flex items-center gap-2.5">
-                              {img && <img src={img} alt={m.name} className="h-8 w-8 rounded-lg object-cover" />}
-                              <span>{m.name}</span>
-                            </span>
-                            {value === m.name && <Check size={18} />}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-
-          {allowCustom && (
-            <>
-              {!customMode ? (
-                <button
-                  type="button"
-                  className="rounded-xl px-4 py-3.5 text-left text-sm font-medium transition-colors active:bg-surface-3"
-                  style={{ color: 'var(--c-ink-3)', background: 'var(--c-surface-3)' }}
-                  onClick={() => setCustomMode(true)}
-                >
-                  + Custom…
-                </button>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  <input
-                    className="field"
-                    placeholder="Type your own method…"
-                    value={customValue}
-                    autoFocus
-                    onChange={(e) => setCustomValue(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && customValue.trim()) {
-                        onChange(customValue.trim());
-                        setOpen(false);
-                        setCustomMode(false);
-                        setCustomValue('');
-                      }
-                    }}
-                  />
-                  <button
-                    className="btn-primary"
-                    onClick={() => {
-                      if (customValue.trim()) {
-                        onChange(customValue.trim());
-                        setOpen(false);
-                        setCustomMode(false);
-                        setCustomValue('');
-                      }
-                    }}
-                  >
-                    Save
-                  </button>
-                </div>
-              )}
-            </>
-          )}
+            ))}
+          </div>
         </div>
       </BottomSheet>
     </div>

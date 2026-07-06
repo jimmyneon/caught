@@ -9,6 +9,7 @@ import { softDeleteCatch } from '../lib/sync';
 import SpeciesInput from '../components/SpeciesInput';
 import WeightInput from '../components/WeightInput';
 import MethodSelect from '../components/MethodSelect';
+import BaitSelect from '../components/BaitSelect';
 import SelectDropdown from '../components/SelectDropdown';
 import ConditionsGrid from '../components/ConditionsGrid';
 import LocationPicker from '../components/LocationPicker';
@@ -114,14 +115,22 @@ export default function CatchEdit() {
           capitalize
         />
 
-        {/* Method / bait — right after water type for dynamic filtering */}
+        {/* Method — the technique (float, ledger, lure, fly, etc.) */}
         <MethodSelect
           value={rec.method}
-          subType={rec.baitSubType}
           species={rec.species}
           waterType={rec.waterType}
           onChange={(method) => patch({ method })}
-          onSubTypeChange={(baitSubType) => patch({ baitSubType })}
+        />
+
+        {/* Bait — the actual bait/lure/fly, filtered by method + species + water type */}
+        <BaitSelect
+          value={rec.baitSubType}
+          subType={undefined}
+          method={rec.method}
+          species={rec.species}
+          waterType={rec.waterType}
+          onChange={(baitSubType) => patch({ baitSubType })}
         />
 
         <WeightInput

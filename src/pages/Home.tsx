@@ -5,6 +5,7 @@ import { Settings as SettingsIcon, Check, Plus, Cloud } from 'lucide-react';
 import { db } from '../db';
 import type { CatchRecord } from '../types';
 import { enrichCatch, retryPendingEnrichment } from '../lib/enrich';
+import { getSpeciesImage } from '../lib/images';
 import { useSettings } from '../hooks/useSettings';
 import { useAuth } from '../hooks/useAuth';
 import BottomSheet from '../components/BottomSheet';
@@ -62,6 +63,7 @@ export default function Home() {
   const [bgLoaded, setBgLoaded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [pullDist, setPullDist] = useState(0);
+  const [showIncomplete, setShowIncomplete] = useState(false);
   const touchStartY = useRef<number | null>(null);
   const rippleId = useRef(0);
   const bgRef = useRef<HTMLImageElement>(null);
@@ -79,7 +81,7 @@ export default function Home() {
   const showSignInBanner = !authLoading && !isSignedIn && isSupabaseConfigured;
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    if (savedId) return; // BottomSheet open
+    if (savedId || showIncomplete) return; // BottomSheet open
     const main = document.querySelector('main');
     if (main && main.scrollTop === 0) {
       touchStartY.current = e.touches[0].clientY;
@@ -89,7 +91,7 @@ export default function Home() {
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (touchStartY.current == null || savedId) return;
+    if (touchStartY.current == null || savedId || showIncomplete) return;
     const delta = e.touches[0].clientY - touchStartY.current;
     if (delta > 0 && delta < 120) {
       setPullDist(delta * 0.5);
@@ -97,7 +99,7 @@ export default function Home() {
   };
 
   const handleTouchEnd = () => {
-    if (pullDist > 50 && !savedId) {
+    if (pullDist > 50 && !savedId && !showIncomplete) {
       setRefreshing(true);
       // Trigger refresh — re-run enrichment for any pending catches
       retryPendingEnrichment(settings.saveLocation);
@@ -265,10 +267,7 @@ export default function Home() {
         {/* Bottom: incomplete prompt */}
         {incomplete > 0 && (
           <button
-            onClick={() => {
-              const first = incompleteCatches[0];
-              if (first) navigate(`/catch/${first.id}`);
-            }}
+            onClick={() => setShowIncomplete(true)}
             className="mb-4 flex w-full items-center gap-3 rounded-2xl bg-white/8 p-3.5 backdrop-blur-md transition-transform active:scale-[0.98]"
           >
             <span className="flex-1 text-left text-sm font-semibold text-white">
@@ -278,6 +277,46 @@ export default function Home() {
           </button>
         )}
       </div>
+
+      {/* Incomplete catches sheet — work through them all */}
+      <BottomSheet open={showIncomplete} onClose={() => setShowIncomplete(false)} title="Incomplete catches">
+        <div className="flex flex-col gap-2">
+          <p className="mb-2 text-sm text-ink-3">
+            {incomplete} catch{incomplete > 1 ? 'es' : ''} need details. Tap one to add species, weight and method.
+          </p>
+          {incompleteCatches.map((c) => {
+            const img = getSpeciesImage(c.species ?? '');
+            return (
+              <button
+                key={c.id}
+                onClick={() => {
+                  setShowIncomplete(false);
+                  navigate(`/catch/${c.id}`);
+                }}
+                className="flex w-full items-center gap-3 rounded-xl p-3 text-left transition-colors active:bg-surface-3"
+                style={{ background: 'var(--c-surface-3)' }}
+              >
+                {img ? (
+                  <img src={img} alt="" className="h-12 w-12 rounded-lg object-cover" />
+                ) : (
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg" style={{ background: 'var(--c-accent-bg)' }}>
+                    <Plus size={20} style={{ color: 'var(--c-accent)' }} />
+                  </div>
+                )}
+                <div className="flex-1">
+                  <div className="text-sm font-bold text-ink">{c.species || 'Unknown fish'}</div>
+                  <div className="text-xs text-ink-3">
+                    {new Date(c.createdAt).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}
+                    {c.weightKg == null && ' · No weight'}
+                    {!c.method && ' · No method'}
+                  </div>
+                </div>
+                <span className="text-sm font-bold" style={{ color: 'var(--c-accent)' }}>→</span>
+              </button>
+            );
+          })}
+        </div>
+      </BottomSheet>
 
       {/* Catch saved slide-up */}
       <BottomSheet open={!!savedId} onClose={() => setSavedId(null)}>

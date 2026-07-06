@@ -88,19 +88,18 @@ export default function WeightInput({ valueKg, units, onChange }: Props) {
         <ChevronDown size={18} style={{ color: 'var(--c-ink-3)' }} />
       </button>
 
-      <BottomSheet open={open} onClose={() => setOpen(false)} fullHeight>
-        <div className="flex h-full flex-col">
-          {/* Header */}
-          <div className="pb-2 text-center">
+      <BottomSheet open={open} onClose={() => setOpen(false)}>
+        <div className="flex flex-col gap-3">
+          <div className="text-center">
             <h2 className="text-xl font-extrabold text-ink">Weight</h2>
             <p className="mt-0.5 text-xs font-medium text-ink-3">
               {hasValue ? `Current: ${formatWeight(valueKg!, units)}` : 'Scroll to set weight'}
             </p>
           </div>
 
-          {/* Spin wheels — take all available space, vertically centered */}
-          <div className="flex flex-1 items-center justify-center rounded-2xl p-3" style={{ background: 'var(--c-surface-2)' }}>
-            <div className="flex items-stretch gap-6 w-full">
+          {/* Spin wheels */}
+          <div className="flex items-center justify-center rounded-2xl p-4" style={{ background: 'var(--c-surface-2)' }}>
+            <div className="flex items-stretch gap-8 w-full">
               {units === 'metric' ? (
                 <>
                   <SpinWheel
@@ -135,8 +134,8 @@ export default function WeightInput({ valueKg, units, onChange }: Props) {
             </div>
           </div>
 
-          {/* Bottom buttons — Clear and Done */}
-          <div className="flex gap-3 pt-3 pb-2">
+          {/* Clear + Done on the same line at the bottom */}
+          <div className="flex gap-3 pt-1">
             <button
               type="button"
               className="flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold transition-colors active:opacity-60"
